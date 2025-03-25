@@ -1,0 +1,91 @@
+<?xml version="1.0"?>
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+<!-- Gazebo Drive control -->
+	 <!-- <gazebo>
+        <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
+			<ros>
+				<namespace>${robot_name}</namespace>
+            </ros>
+
+            <left_joint>leftWheel_joint</left_joint>
+            <right_joint>rightWheel_joint</right_joint>
+            <wheel_separation>0.1863</wheel_separation>
+            <wheel_diameter>0.065</wheel_diameter>
+
+
+            <max_wheel_torque>200</max_wheel_torque>
+            <max_wheel_acceleration>10.0</max_wheel_acceleration>
+
+            
+            <odometry_frame>odom</odometry_frame>
+            <robot_base_frame>base_link</robot_base_frame>
+
+            <publish_odom>true</publish_odom>
+            <publish_odom_tf>true</publish_odom_tf>
+            <publish_wheel_tf>true</publish_wheel_tf>
+
+        </plugin>
+    </gazebo> -->
+
+<!-- Gazebo Lidar control -->
+    <gazebo reference="laser_frame">
+        <material>Gazebo/Black</material>
+        <sensor name="laser" type="ray">
+            <pose> 0 0 0 0 0 0 </pose>
+            <visualize>false</visualize>
+            <update_rate>10</update_rate>
+            <ray>
+                <scan>
+                    <horizontal>
+                        <samples>360</samples>
+                        <min_angle>-3.14</min_angle>
+                        <max_angle>3.14</max_angle>
+                    </horizontal>
+                </scan>
+                <range>
+                    <min>0.11</min>
+                    <max>10</max>
+                </range>
+            </ray>
+            <plugin name="laser_controller" filename="libgazebo_ros_ray_sensor.so">
+                <ros>
+					<namespace>${robot_name}</namespace>
+    				<remapping>~/out:=scan</remapping>
+                </ros>
+                <output_type>sensor_msgs/LaserScan</output_type>
+                <frame_name>laser_frame</frame_name>
+            </plugin>
+        </sensor>
+    </gazebo>
+
+<!-- Gazebo Camera control -->
+ 	<gazebo reference="camera_link">
+        <material>Gazebo/Black</material>
+
+        <sensor name="camera" type="camera">
+            <visualize>true</visualize>
+            <update_rate>30.0</update_rate>
+            <camera>
+                <horizontal_fov>0.5</horizontal_fov>
+                <image>
+                    <format>R8G8B8</format>
+                    <width>640</width>
+                    <height>480</height>
+                </image>
+                <clip>
+                    <near>0.05</near>
+                    <far>10.0</far>
+                </clip>
+            </camera>
+            <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+                <frame_name>camera_link</frame_name>
+
+				<ros>
+					<namespace>${robot_name}</namespace>
+        		</ros>
+            </plugin>
+        </sensor>
+    </gazebo>
+</robot>
