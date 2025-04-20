@@ -23,7 +23,7 @@ class ColorDetect(Node):
         )
         self.head_sub = self.create_subscription(
             String, 
-            '/signal', 
+            '/robot_command', 
             self.head_signal, 
             10
         )
@@ -40,12 +40,12 @@ class ColorDetect(Node):
         upper_red = np.array([5, 255, 255])
         mask = cv2.inRange(hsv, lower_red, upper_red)
 
-        if np.count_nonzero(mask) > 100000:
+        if np.count_nonzero(mask) > 76800:  # 76800 is 25% of 307200 which is number of pixels in 640x480 camera image
             self.send_message()
         
     def send_message(self):
         msg = String()
-        msg.data = f"{self.get_namespace()}: Color detected!"
+        msg.data = f"{self.get_namespace()}|Color detected!"
         self.publisher.publish(msg)
 
     def head_signal(self, msg):

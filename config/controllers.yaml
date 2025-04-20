@@ -1,4 +1,4 @@
-jetbot_3:
+jetbot:
   controller_manager:
     ros__parameters:
       update_rate: 100

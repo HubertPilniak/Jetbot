@@ -3,7 +3,7 @@
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
 <!-- Gazebo Drive control -->
-	 <!-- <gazebo>
+	 <gazebo>
         <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
 			<ros>
 				<namespace>${robot_name}</namespace>
@@ -27,13 +27,12 @@
             <publish_wheel_tf>true</publish_wheel_tf>
 
         </plugin>
-    </gazebo> -->
+    </gazebo>
 
 <!-- Gazebo Lidar control -->
     <gazebo reference="laser_frame">
         <material>Gazebo/Black</material>
         <sensor name="laser" type="ray">
-            <pose> 0 0 0 0 0 0 </pose>
             <visualize>false</visualize>
             <update_rate>10</update_rate>
             <ray>
@@ -45,7 +44,7 @@
                     </horizontal>
                 </scan>
                 <range>
-                    <min>0.11</min>
+                    <min>0.08</min>
                     <max>10</max>
                 </range>
             </ray>

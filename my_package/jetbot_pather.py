@@ -11,13 +11,13 @@ class PathLogger(Node):
         super().__init__('path_logger')
         self.subscription = self.create_subscription(
             Odometry,
-            f'{self.get_namespace()}/diff_controller/odom',
+            f'{self.get_namespace()}/odom',
             self.odom_callback,
-            10
+            1
         )
         self.head_sub = self.create_subscription(
             String, 
-            '/signal', 
+            '/robot_command', 
             self.head_signal, 
             10
         )
@@ -26,19 +26,17 @@ class PathLogger(Node):
         self.file_path = os.path.expanduser(f'~{self.get_namespace()}_path.csv')
         with open(self.file_path, 'w') as file:
             writer = csv.writer(file)
-            writer.writerow(['x', 'y', 'z', 'timestamp']) 
+            writer.writerow(['x', 'y']) 
 
     def odom_callback(self, msg):
         if not self.running:  
             return
         x = msg.pose.pose.position.x
         y = msg.pose.pose.position.y
-        z = msg.pose.pose.position.z
-        timestamp = self.get_clock().now().to_msg().sec
 
         with open(self.file_path, 'a') as file:
             writer = csv.writer(file)
-            writer.writerow([x, y, z, timestamp])
+            writer.writerow([x, y])
 
 
     def head_signal(self, msg):
