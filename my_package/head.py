@@ -149,7 +149,6 @@ class Head(Node):
 
     def grid_create(self, width, height):
         if width > 0.0 and height > 0.0:
-            self.get_logger().info("Creating grid.")
             resolution = 0.2
 
             self.grid = OccupancyGrid()
@@ -164,6 +163,8 @@ class Head(Node):
 
             self.grid.data = [-1] * (self.grid.info.width * self.grid.info.height)
 
+            self.get_logger().info("Grid created.")
+
     def grid_save(self):
         width = self.grid.info.width
         height = self.grid.info.height
@@ -175,7 +176,15 @@ class Head(Node):
             x, y = position
             display_grid[y, x] = 0.0   # robot (black)
 
-        plt.figure(figsize=(10, 10))  # size of figure in inches
+        total_cells = width * height
+        explored_cells = np.count_nonzero(data == 1)
+        unknown_cells = np.count_nonzero(data == -1)
+
+        self.get_logger().info(f"Total cells: {total_cells}")
+        self.get_logger().info(f"Explored cells: {explored_cells}")
+        self.get_logger().info(f"Unknown cells: {unknown_cells}")
+
+        plt.figure(figsize=(10, 10)) 
         plt.imshow(display_grid, cmap='gray', origin='lower', vmin=0.0, vmax=1.0)
         plt.title("Occupancy Grid")
         plt.xlabel("X (cells)")

@@ -40,7 +40,7 @@ class ColorDetect(Node):
         upper_red = np.array([5, 255, 255])
         mask = cv2.inRange(hsv, lower_red, upper_red)
 
-        if np.count_nonzero(mask) > 76800:  # 76800 is 25% of 307200 which is number of pixels in 640x480 camera image
+        if np.count_nonzero(mask) > 30720:  # 30720 is 10% of 307200 which is number of pixels in 640x480 camera image; around 1 meter from red box
             self.send_message()
         
     def send_message(self):
