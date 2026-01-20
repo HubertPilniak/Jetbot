@@ -8,10 +8,15 @@ import numpy as np
 import random
 import math
 
+from my_package.jetbot_callbacks import Callbacks
+
 
 class RoomSearch(Node):
     def __init__(self):
         super().__init__('room_search')
+
+        self.callbacks = Callbacks(self)
+        
         self.cmd_vel_pub = self.create_publisher(
             Twist, 
             f'{self.get_namespace()}/cmd_vel', 
@@ -20,19 +25,19 @@ class RoomSearch(Node):
         self.laser_sub = self.create_subscription(
             LaserScan, 
             f'{self.get_namespace()}/scan', 
-            self.laser_callback, 
+            self.callbacks.laser_callback, 
             10
         )
-        self.subscription = self.create_subscription(
+        self.odom_sub = self.create_subscription(
             Odometry,
             f'{self.get_namespace()}/odom',
-            self.odom_callback,
+            self.callbacks.odom_callback,
             1
         )
         self.head_sub = self.create_subscription(
             String, 
             '/robot_command', 
-            self.head_signal, 
+            self.callbacks.head_callback, 
             10
         )
         self.robot_position_pub = self.create_publisher(
@@ -70,7 +75,7 @@ class RoomSearch(Node):
 
         self.side_obstacle_distance_min = 0.25
 
-        self.angles_distance_min = 0.5
+        self.angle_distance_min = 0.5
 
         self.running = False
 
@@ -82,31 +87,6 @@ class RoomSearch(Node):
 
         self.robot_distance_min = 2.0
 
-    def laser_callback(self, msg):
-        self.ranges = np.array(msg.ranges)
-
-        if np.min(self.ranges) < self.critical_distance:
-            self.running = False
-            self.twist.linear.x = 0.0
-            self.twist.angular.z = 0.0
-            self.cmd_vel_pub.publish(self.twist)
-
-            self.get_logger().info("Something too close!")
-
-        self.front_ranges = np.array(msg.ranges[135:226]) 
-        self.left_ranges = np.array(msg.ranges[226:276])
-        self.right_ranges = np.array(msg.ranges[90:135])
-        self.rear_ranges = np.concatenate((msg.ranges[315:], msg.ranges[:46]))
-
-    def odom_callback(self, msg):
-        
-        self.my_pose = msg.pose.pose.position
-        self.my_orientation = msg.pose.pose.orientation
-
-        msg_to_send = String()
-        msg_to_send.data = f'{self.get_namespace()}|{self.my_pose.x}|{self.my_pose.y}'
-        self.robot_position_pub.publish(msg_to_send)
-
     def search(self):
         if not self.running:
             return
@@ -117,9 +97,10 @@ class RoomSearch(Node):
         self.twist.linear.x = 0.0
         self.twist.angular.z = 0.0
 
-        angle = self.check_distances() # check distances
-
-        if angle:                       # if check_distance returns angle then it means that we need to rotate robot
+        angle = self.check_distances_and_separate() # check distances and if robots are to close separate them
+        
+        if (angle >= 181 or angle <= 179): # only if rotation angle is bigger or equal 1 degree we vhange direction (robot always facing 180 degree)
+            self.waiting_for_safe_angle = True # set to true to get all possible angles for changing direction 
             self.start_changing_direction(angle)
             return
 
@@ -163,18 +144,6 @@ class RoomSearch(Node):
 
         self.cmd_vel_pub.publish(self.twist)
 
-    def head_signal(self, msg):
-        if msg.data == "Start":
-            self.get_logger().info("Start!")
-            self.running = True 
-
-        elif msg.data == "Stop":
-            self.get_logger().info("Stop!")
-            self.running = False
-            self.twist.linear.x = 0.0
-            self.twist.angular.z = 0.0
-            self.cmd_vel_pub.publish(self.twist)
-
     def quaternion_angle(self, q1, q2):
         angle = 0.0
         angle += q1.x * q2.x
@@ -196,7 +165,7 @@ class RoomSearch(Node):
         
         end_angle = avoid_angle
 
-        obstacle_distance = self.angles_distance_min # in what distance to obstacle we don't want to ride;
+        obstacle_distance = self.angle_distance_min # in what distance to obstacle we don't want to ride;
 
         safe_angles = np.array([])
 
@@ -236,15 +205,15 @@ class RoomSearch(Node):
         left_min = np.min(self.left_ranges)
         right_min = np.min(self.right_ranges)
 
-    # Jeśli coś jest blisko z lewej strony
+    # if something is close from left side
         if left_min < self.side_obstacle_distance_min:
             self.twist.linear.x = 0.0
-            self.twist.angular.z -= 0.1  # skręć w prawo lekko
+            self.twist.angular.z -= 0.1  # turn a little bit right
 
-    # Jeśli coś jest blisko z prawej strony
+    # if something is close from right side
         if right_min < self.side_obstacle_distance_min:
             self.twist.linear.x = 0.0
-            self.twist.angular.z += 0.1  # skręć w lewo lekko
+            self.twist.angular.z += 0.1  # turn a little bit left
 
     def start_changing_direction(self, prefered_angle):
 
@@ -304,28 +273,28 @@ class RoomSearch(Node):
 
         self.robots_positions[robot_name] = (float(robot_position_x), float(robot_position_y))
         
-        robot_1 = self.get_namespace()
+        this_robot= self.get_namespace()
 
-        if robot_1 in self.robots_positions:
+        if this_robot in self.robots_positions:
 
-            for robot_2, position in self.robots_positions.items():
-                if robot_2 != robot_1:
-                    self.robots_distances[robot_2] = math.dist(self.robots_positions[robot_1], position)
+            for other_robot, position in self.robots_positions.items():
+                if other_robot != this_robot:
+                    self.robots_distances[other_robot] = math.dist(self.robots_positions[this_robot], position)
 
-    def check_distances(self):
+    def check_distances_and_separate(self):
         angles = []
 
-        robot_1 = self.get_namespace()
+        this_robot = self.get_namespace()
 
-        for robot_2, distance in self.robots_distances.items():
+        for other_robot, distance in self.robots_distances.items():
             if distance < self.robot_distance_min:
-                dx = self.robots_positions[robot_2][0] - self.robots_positions[robot_1][0]
-                dy = self.robots_positions[robot_2][1] - self.robots_positions[robot_1][1]
+                dx = self.robots_positions[other_robot][0] - self.robots_positions[this_robot][0]
+                dy = self.robots_positions[other_robot][1] - self.robots_positions[this_robot][1]
                 angle = math.atan2(dy, dx)
                 angles.append(angle)
 
         if len(angles) == 0:
-            return
+            return 180 # robot always facing 180 degree
 
         if len(angles) > 0:
             avg_angle = math.atan2(
@@ -336,9 +305,7 @@ class RoomSearch(Node):
             avg_angle = angles[0]
 
 
-        avg_angle = avg_angle + math.pi
-
-        avg_angle = (avg_angle + math.pi) % (2 * math.pi) - math.pi
+        avg_angle = avg_angle - math.pi
 
         avg_angle = math.degrees(avg_angle)
 
@@ -359,10 +326,7 @@ class RoomSearch(Node):
 
         self.get_logger().info(f'Kat obrotu {avg_angle}')
 
-        if avg_angle >= 185 or avg_angle <= 175: # only if rotation is bigger than 5 degree
-            return avg_angle
-        
-        return
+        return avg_angle
 
 def main(args=None):
     rclpy.init(args=args)

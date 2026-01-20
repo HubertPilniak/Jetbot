@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 class Head(Node):
     def __init__(self):
         super().__init__('head')
+
         self.detect_sub = self.create_subscription(
             String,
             '/detect',
@@ -59,6 +60,11 @@ class Head(Node):
 
         self.robots_positions = {}
 
+    def command_take_direction(self):
+        msg = String()
+        msg.data = f'/jetbot|{self.robots_positions["/jetbot"]}|{self.index_to_world(0)}'
+        self.robot_command_pub.publish(msg)
+        self.get_logger().info("Sent direction!")
 
     def command_stop(self):
         msg = String()
@@ -104,6 +110,18 @@ class Head(Node):
                 
             if command.lower() == "stop":
                 self.command_stop()
+
+            if command.lower() == "hop":
+                self.command_take_direction()
+
+    def index_to_world(self, index):
+        if 0 <= index < self.grid.info.width * self.grid.info.height:
+
+            x = index // self.grid.info.width
+            y = index % self.grid.info.height
+            return 0, 0
+        else:
+            return self.get_logger().error("Index of cell outside of bonds of the array")
 
     def save_image_once(self, msg):
         if self.image_saved:

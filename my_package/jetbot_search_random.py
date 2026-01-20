@@ -6,12 +6,23 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 import numpy as np
 import random
-import math
+
+from my_package.jetbot_callbacks import Callbacks
+from my_package.jetbot_change_direction import TakeDirection
 
 
 class RoomSearch(Node):
     def __init__(self):
         super().__init__('room_search')
+
+        self.callbacks = Callbacks(self)
+        #
+        self.take_direction = TakeDirection(self)
+        self.t_d = False
+        self.robot_coordinates = (0, 0)
+        self.cell_coordinates = (0, 0)
+        #
+
         self.cmd_vel_pub = self.create_publisher(
             Twist, 
             f'{self.get_namespace()}/cmd_vel', 
@@ -20,19 +31,19 @@ class RoomSearch(Node):
         self.laser_sub = self.create_subscription(
             LaserScan, 
             f'{self.get_namespace()}/scan', 
-            self.laser_callback, 
+            self.callbacks.laser_callback, 
             10
         )
-        self.subscription = self.create_subscription(
+        self.odom_sub = self.create_subscription(
             Odometry,
             f'{self.get_namespace()}/odom',
-            self.odom_callback,
+            self.callbacks.odom_callback,
             1
         )
         self.head_sub = self.create_subscription(
             String, 
             '/robot_command', 
-            self.head_signal, 
+            self.callbacks.head_callback,
             10
         )
         self.robot_position_pub = self.create_publisher(
@@ -70,33 +81,6 @@ class RoomSearch(Node):
 
         self.waiting_for_safe_angle = False
 
-    def laser_callback(self, msg):
-        self.ranges = np.array(msg.ranges)
-
-        if np.min(self.ranges) < self.critical_distance:
-            self.running = False
-            self.twist.linear.x = 0.0
-            self.twist.angular.z = 0.0
-            self.cmd_vel_pub.publish(self.twist)
-
-            self.get_logger().info("Something too close!")
-
-        self.front_ranges = np.array(msg.ranges[135:226]) 
-        self.left_ranges = np.array(msg.ranges[226:276])
-        self.right_ranges = np.array(msg.ranges[90:135])
-        self.rear_ranges = np.concatenate((msg.ranges[315:], msg.ranges[:46]))
-
-    def odom_callback(self, msg):
-        if not self.running:  
-            return
-        
-        self.my_pose = msg.pose.pose.position
-        self.my_orientation = msg.pose.pose.orientation
-
-        msg_to_send = String()
-        msg_to_send.data = f'{self.get_namespace()}|{self.my_pose.x}|{self.my_pose.y}'
-        self.robot_position_pub.publish(msg_to_send)
-
     def search(self):
         if not self.running:
             return
@@ -107,6 +91,12 @@ class RoomSearch(Node):
         self.twist.linear.x = 0.0
         self.twist.angular.z = 0.0
 
+        #
+        if self.t_d == True:
+            self.waiting_for_safe_angle = True # set to true to get all possible angles for changing direction 
+            self.get_logger().info(f"Dostalem koordynaty {(self.my_pose.x, self.my_pose.y)}")
+            self.start_changing_direction(self.take_direction.take_direction((self.my_pose.x, self.my_pose.y), self.cell_coordinates))
+        # 
 
         if front_center_min > self.obstacle_distance_mid:
             self.twist.linear.x = 0.2
@@ -123,7 +113,7 @@ class RoomSearch(Node):
         else:
             self.cmd_vel_pub.publish(self.twist)
 
-            self.start_changing_direction()
+            self.start_changing_direction(None)
 
             return
         
@@ -146,18 +136,6 @@ class RoomSearch(Node):
             self.twist.angular.z = turn
 
         self.cmd_vel_pub.publish(self.twist)
-
-    def head_signal(self, msg):
-        if msg.data == "Start":
-            self.get_logger().info("Start!")
-            self.running = True 
-
-        elif msg.data == "Stop":
-            self.get_logger().info("Stop!")
-            self.running = False
-            self.twist.linear.x = 0.0
-            self.twist.angular.z = 0.0
-            self.cmd_vel_pub.publish(self.twist)
 
     def quaternion_angle(self, q1, q2):
         angle = 0.0
@@ -220,17 +198,17 @@ class RoomSearch(Node):
         left_min = np.min(self.left_ranges)
         right_min = np.min(self.right_ranges)
 
-    # Jeśli coś jest blisko z lewej strony
+    # if something is close from left side
         if left_min < self.side_obstacle_distance_min:
             self.twist.linear.x = 0.0
-            self.twist.angular.z -= 0.1  # skręć w prawo lekko
+            self.twist.angular.z -= 0.1  # turn a little bit right
 
-    # Jeśli coś jest blisko z prawej strony
+    # if something is close from right side
         if right_min < self.side_obstacle_distance_min:
             self.twist.linear.x = 0.0
-            self.twist.angular.z += 0.1  # skręć w lewo lekko
+            self.twist.angular.z += 0.1  # turn a little bit left
 
-    def start_changing_direction(self):
+    def start_changing_direction(self, prefered_angle):
 
 
         self.initial_orientation = self.my_orientation
@@ -249,9 +227,15 @@ class RoomSearch(Node):
             
         self.timer.cancel()
 
-        self.waiting_for_safe_angle = False                                                  
+        self.waiting_for_safe_angle = False  
+        self.t_d = False
 
-        angle_to_rotate = random.choice(safe_angles) - 180  # safe_angles can have values from 0 to 359, robot always facing 180 degree, 
+        #
+        if prefered_angle:                                                 
+             angle_to_rotate = min(safe_angles, key=lambda angle: abs(angle - prefered_angle)) - 180
+        #                                                 
+        else:
+            angle_to_rotate = random.choice(safe_angles) - 180  # safe_angles can have values from 0 to 359, robot always facing 180 degree, 
                                                                 # so after substraction of 180 we get angle about which we have to rotate
             
         self.get_logger().info(f'Rotating by {angle_to_rotate} degree')

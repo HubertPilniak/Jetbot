@@ -36,6 +36,6 @@ def generate_launch_description():
         jetbots.append(TimerAction(period=i * 5.0, actions=[jetbot]))
 
     return LaunchDescription([DeclareLaunchArgument('search_type', default_value='random'),
-                              DeclareLaunchArgument('world', default_value='10mx10m_setup_1'),
+                              DeclareLaunchArgument('world', default_value='setup_1'),
                               gazebo
                               ] + jetbots)

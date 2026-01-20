@@ -91,12 +91,22 @@
       <heading_deg>0</heading_deg>
     </spherical_coordinates>
     <state world_name='default'>
-      <sim_time>5160 523000000</sim_time>
-      <real_time>81 622500258</real_time>
-      <wall_time>1744891084 960563631</wall_time>
-      <iterations>81009</iterations>
+      <sim_time>5267 651000000</sim_time>
+      <real_time>110 52491907</real_time>
+      <wall_time>1745952198 448731087</wall_time>
+      <iterations>107128</iterations>
+      <model name='RedBox'>
+        <pose>0.037538 -4.39224 0.15 1e-06 -0 -0.000295</pose>
+        <scale>1 1 1</scale>
+        <link name='link_0'>
+          <pose>0.037538 -4.39224 0.15 1e-06 -0 -0.000295</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0.014594 -0.387275 -0.011364 2.58806 0.064395 -2.3e-05</acceleration>
+          <wrench>0.014594 -0.387275 -0.011364 0 -0 0</wrench>
+        </link>
+      </model>
       <model name='Square_10mx10m_0'>
-        <pose>0 0 0 0 -0 0</pose>
+        <pose>0 -0 0 0 -0 0</pose>
         <scale>1 1 1</scale>
         <link name='Wall_13'>
           <pose>0 5.075 0 0 -0 3.14159</pose>
@@ -149,8 +159,8 @@
         <link name='link'>
           <pose>1.77763 2.44728 0.148999 0 0 -0.000101</pose>
           <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>-0.00299 0.001375 -0.008266 -0.007838 -0.019106 -6.2e-05</acceleration>
-          <wrench>-0.00598 0.00275 -0.016532 0 -0 0</wrench>
+          <acceleration>-0.002602 0.001343 -0.007155 -0.007294 -0.016418 -5.4e-05</acceleration>
+          <wrench>-0.005204 0.002686 -0.014309 0 -0 0</wrench>
         </link>
       </model>
       <model name='cardboard_box_0'>
@@ -169,18 +179,18 @@
         <link name='link'>
           <pose>2.28204 2.44465 0.148999 -0 -0 -9.3e-05</pose>
           <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>-0.003066 0.001539 -0.002137 -0.01163 -0.020072 0.000152</acceleration>
-          <wrench>-0.006133 0.003078 -0.004273 0 -0 0</wrench>
+          <acceleration>-0.00268 0.001524 -0.002698 -0.011866 -0.017369 0.000185</acceleration>
+          <wrench>-0.005359 0.003047 -0.005396 0 -0 0</wrench>
         </link>
       </model>
       <model name='cardboard_box_2'>
-        <pose>1.77049 2.04808 0.148999 -1e-06 0 -0.000192</pose>
+        <pose>1.77049 2.04808 0.148999 -1e-06 -0 -0.000193</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose>1.77049 2.04808 0.148999 -1e-06 0 -0.000192</pose>
+          <pose>1.77049 2.04808 0.148999 -1e-06 -0 -0.000193</pose>
           <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>-0.002788 0.001334 -0.005664 -0.008502 -0.017493 0.00021</acceleration>
-          <wrench>-0.005577 0.002669 -0.011329 0 -0 0</wrench>
+          <acceleration>-0.002379 0.001298 -0.004674 -0.008349 -0.014671 0.000301</acceleration>
+          <wrench>-0.004757 0.002597 -0.009348 0 -0 0</wrench>
         </link>
       </model>
       <model name='cardboard_box_3'>
@@ -189,8 +199,8 @@
         <link name='link'>
           <pose>2.26973 2.04546 0.148999 -0 -0 -9.4e-05</pose>
           <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>-0.002997 0.001402 0.002911 -0.01076 -0.019654 -1.9e-05</acceleration>
-          <wrench>-0.005993 0.002804 0.005822 0 -0 0</wrench>
+          <acceleration>-0.0026 0.001379 0.002584 -0.010548 -0.016948 -2.6e-05</acceleration>
+          <wrench>-0.0052 0.002758 0.005168 0 -0 0</wrench>
         </link>
       </model>
       <model name='cardboard_box_4'>
@@ -199,8 +209,8 @@
         <link name='link'>
           <pose>2.02893 2.43119 0.447999 -1e-06 -0 -1e-06</pose>
           <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0.008223 0.031175 0.010444 -0.189775 0.094448 0.000763</acceleration>
-          <wrench>0.016445 0.062349 0.020888 0 -0 0</wrench>
+          <acceleration>0.010359 0.031111 0.010111 -0.189782 0.103459 0.000898</acceleration>
+          <wrench>0.020718 0.062223 0.020222 0 -0 0</wrench>
         </link>
       </model>
       <model name='cardboard_box_5'>
@@ -224,13 +234,13 @@
         </link>
       </model>
       <model name='first_2015_trash_can'>
-        <pose>0.964145 -3.34185 -1e-06 9e-06 1.4e-05 -0.005908</pose>
+        <pose>0.96421 -3.34187 -1e-05 -2.4e-05 6e-06 -0.006317</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose>0.964145 -3.34185 -1e-06 9e-06 1.4e-05 -0.005908</pose>
+          <pose>0.96421 -3.34187 -1e-05 -2.4e-05 6e-06 -0.006317</pose>
           <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>-4.80089 4.26264 5.65362 0.991097 -0.469343 -0.000806</acceleration>
-          <wrench>-23.192 20.5918 27.3113 0 -0 0</wrench>
+          <acceleration>0 0 -9.8 -1e-06 -1e-06 0</acceleration>
+          <wrench>0 0 -47.3414 0 -0 0</wrench>
         </link>
       </model>
       <model name='ground_plane'>
@@ -279,7 +289,7 @@
     </state>
     <gui fullscreen='0'>
       <camera name='user_camera'>
-        <pose>5.77682 1.34028 18.3747 0 1.2818 3.11788</pose>
+        <pose>6.47061 0.53045 13.205 0 1.1458 3.12192</pose>
         <view_controller>orbit</view_controller>
         <projection_type>perspective</projection_type>
       </camera>
@@ -1929,6 +1939,109 @@
       <static>1</static>
       <allow_auto_disable>1</allow_auto_disable>
       <pose>0.519324 8.70561 0 0 -0 0</pose>
+    </model>
+    <model name='RedBox'>
+      <link name='link_0'>
+        <inertial>
+          <mass>1</mass>
+          <inertia>
+            <ixx>0.166667</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.166667</iyy>
+            <iyz>0</iyz>
+            <izz>0.166667</izz>
+          </inertia>
+          <pose>0 0 0 0 -0 0</pose>
+        </inertial>
+        <pose>0 0 0 0 -0 0</pose>
+        <gravity>1</gravity>
+        <self_collide>0</self_collide>
+        <kinematic>0</kinematic>
+        <enable_wind>0</enable_wind>
+        <visual name='visual'>
+          <pose>0 0 0 0 -0 0</pose>
+          <geometry>
+            <box>
+              <size>0.1 0.1 0.3</size>
+            </box>
+          </geometry>
+          <material>
+            <lighting>1</lighting>
+            <script>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+              <name>Gazebo/Red</name>
+            </script>
+            <shader type='pixel'>
+              <normal_map>__default__</normal_map>
+            </shader>
+            <ambient>1 0 0 1</ambient>
+            <diffuse>0.7 0.7 0.7 1</diffuse>
+            <specular>0.01 0.01 0.01 1</specular>
+            <emissive>0 0 0 1</emissive>
+          </material>
+          <transparency>0</transparency>
+          <cast_shadows>1</cast_shadows>
+        </visual>
+        <collision name='collision'>
+          <laser_retro>0</laser_retro>
+          <max_contacts>10</max_contacts>
+          <pose>0 0 0 0 -0 0</pose>
+          <geometry>
+            <box>
+              <size>0.1 0.1 0.3</size>
+            </box>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1</mu>
+                <mu2>1</mu2>
+                <fdir1>0 0 0</fdir1>
+                <slip1>0</slip1>
+                <slip2>0</slip2>
+              </ode>
+              <torsional>
+                <coefficient>1</coefficient>
+                <patch_radius>0</patch_radius>
+                <surface_radius>0</surface_radius>
+                <use_patch_radius>1</use_patch_radius>
+                <ode>
+                  <slip>0</slip>
+                </ode>
+              </torsional>
+            </friction>
+            <bounce>
+              <restitution_coefficient>0</restitution_coefficient>
+              <threshold>1e+06</threshold>
+            </bounce>
+            <contact>
+              <collide_without_contact>0</collide_without_contact>
+              <collide_without_contact_bitmask>1</collide_without_contact_bitmask>
+              <collide_bitmask>1</collide_bitmask>
+              <ode>
+                <soft_cfm>0</soft_cfm>
+                <soft_erp>0.2</soft_erp>
+                <kp>1e+13</kp>
+                <kd>1</kd>
+                <max_vel>0.01</max_vel>
+                <min_depth>0</min_depth>
+              </ode>
+              <bullet>
+                <split_impulse>1</split_impulse>
+                <split_impulse_penetration_threshold>-0.01</split_impulse_penetration_threshold>
+                <soft_cfm>0</soft_cfm>
+                <soft_erp>0.2</soft_erp>
+                <kp>1e+13</kp>
+                <kd>1</kd>
+              </bullet>
+            </contact>
+          </surface>
+        </collision>
+      </link>
+      <static>0</static>
+      <allow_auto_disable>1</allow_auto_disable>
+      <pose>3.77983 4.41707 0 0 -0 0</pose>
     </model>
   </world>
 </sdf>
