@@ -5,6 +5,9 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from nav_msgs.msg import Odometry, OccupancyGrid, MapMetaData
 from geometry_msgs.msg import Pose, Point
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy
+from tf2_ros.static_transform_broadcaster import StaticTransformBroadcaster
+from geometry_msgs.msg import TransformStamped
 import threading
 import cv2
 import os
@@ -14,6 +17,8 @@ import matplotlib.pyplot as plt
 class Head(Node):
     def __init__(self):
         super().__init__('head')
+
+        self.tf_static_broadcaster = StaticTransformBroadcaster(self)
 
         self.detect_sub = self.create_subscription(
             String,
@@ -26,10 +31,16 @@ class Head(Node):
             '/robot_command',
             10
         )
+
+        map_qos = QoSProfile(
+            depth=1,
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
+        )
+        
         self.grid_pub = self.create_publisher(
             OccupancyGrid,
             '/grid',
-            1
+            map_qos
         )
         self.robot_position_sub = self.create_subscription(
             String,
@@ -59,12 +70,7 @@ class Head(Node):
         self.image_saved = False
 
         self.robots_positions = {}
-
-    def command_take_direction(self):
-        msg = String()
-        msg.data = f'/jetbot|{self.robots_positions["/jetbot"]}|{self.index_to_world(0)}'
-        self.robot_command_pub.publish(msg)
-        self.get_logger().info("Sent direction!")
+     
 
     def command_stop(self):
         msg = String()
@@ -84,6 +90,21 @@ class Head(Node):
         self.get_logger().info("Sent Start!")
 
         self.image_saved = False
+    
+    def command_take_direction(self, index):
+        msg = String()
+        msg.data = f'/jetbot|{self.robots_positions["/jetbot"]}|{self.index_to_world(index)}'
+        self.robot_command_pub.publish(msg)
+        self.get_logger().info("Sent direction!")
+
+    def index_to_world(self, index):
+        if 0 <= index < self.grid.info.width * self.grid.info.height:
+
+            x = index // self.grid.info.width + self.grid.info.origin.position.x
+            y = index % self.grid.info.height + self.grid.info.origin.position.y
+            return x, y
+        else:
+            return self.get_logger().error("index_to_world: Index of cell outside of bonds of the array")   
 
     def detector_callback(self, msg):
         self.robot_name, self.status = msg.data.split("|")
@@ -104,24 +125,23 @@ class Head(Node):
 
     def keyboard_input(self):
         while True:
-            command = input().strip()
+            user_input = input().strip().split()
+            
+            command = user_input[0].lower()
+            args = user_input[1:] 
+
             if command.lower() == "start":
                 self.command_start()
                 
-            if command.lower() == "stop":
+            elif command.lower() == "stop":
                 self.command_stop()
 
-            if command.lower() == "hop":
-                self.command_take_direction()
-
-    def index_to_world(self, index):
-        if 0 <= index < self.grid.info.width * self.grid.info.height:
-
-            x = index // self.grid.info.width
-            y = index % self.grid.info.height
-            return 0, 0
-        else:
-            return self.get_logger().error("Index of cell outside of bonds of the array")
+            elif command.lower() == "hop":
+                if args:
+                    self.command_take_direction(int(args[0]))
+                else:
+                    print("Error: 'hop' requires a value.")
+    
 
     def save_image_once(self, msg):
         if self.image_saved:
@@ -151,18 +171,17 @@ class Head(Node):
         origin_x = self.grid.info.origin.position.x
         origin_y = self.grid.info.origin.position.y
 
-        grid_x = int(round((x + origin_x) / resolution, 0))
-        grid_y = int(round((y + origin_y) / resolution, 0))
+        grid_x = int((x - origin_x) / resolution)
+        grid_y = int((y - origin_y) / resolution)
 
         self.robots_positions[robot_name] = (grid_x, grid_y)
 
         if 0 <= grid_x < self.grid.info.width and 0 <= grid_y < self.grid.info.height:
             index = grid_y * self.grid.info.width + grid_x
-
-            # Tylko jeśli jeszcze nieodwiedzona (-1), ustaw jako odwiedzona (1)
-            if self.grid.data[index] == -1:
-                self.grid.data[index] = 1
-
+            
+            self.grid.data[index] = 1
+            
+            self.grid.header.stamp = self.get_clock().now().to_msg()
             self.grid_pub.publish(self.grid)       
 
     def grid_create(self, width, height):
@@ -174,10 +193,21 @@ class Head(Node):
             self.grid.info.width = int(width / resolution)
             self.grid.info.height = int(height / resolution)
             self.grid.info.resolution = resolution
+            self.grid.header.frame_id = "map"
+
+            t = TransformStamped()
+            t.header.stamp = self.get_clock().now().to_msg()
+            t.header.frame_id = 'base_link' # Parent
+            t.child_frame_id = 'map'    # Child 
+            t.transform.translation.x = 0.0
+            t.transform.translation.y = 0.0
+            t.transform.translation.z = 0.0
+            
+            self.tf_static_broadcaster.sendTransform(t)
 
             self.grid.info.origin = Pose()
-            self.grid.info.origin.position.x = width / 2.0
-            self.grid.info.origin.position.y = height / 2.0
+            self.grid.info.origin.position.x = - width / 2.0
+            self.grid.info.origin.position.y = - height / 2.0
 
             self.grid.data = [-1] * (self.grid.info.width * self.grid.info.height)
 
@@ -186,7 +216,7 @@ class Head(Node):
     def grid_save(self):
         width = self.grid.info.width
         height = self.grid.info.height
-        data = np.array(self.grid.data, dtype=np.int8).reshape((height, width))
+        data = np.array(self.grid.data, dtype=np.int8).reshape((height, width))  # reshape first value number of rows, second number of columns
 
         display_grid = np.ones((height, width), dtype=np.float32)  # visited (white)
         display_grid[data == -1] = 0.5    # unknown (gray)
@@ -208,6 +238,16 @@ class Head(Node):
         plt.xlabel("X (cells)")
         plt.ylabel("Y (cells)")
         plt.grid(False)
+        p = plt.gca()
+        p.set_xticks(np.arange(0, width, 5))
+        p.set_yticks(np.arange(0, height, 5))
+
+        p.set_xticks(np.arange(-.5, width, 1), minor=True)
+        p.set_yticks(np.arange(-.5, height, 1), minor=True)
+
+        p.grid(which='minor', color='black', linestyle='-', linewidth=1)
+
+        p.tick_params(which='minor', bottom=False, left=False)
 
         filename="occupancy_grid.png"
         plt.savefig(filename)

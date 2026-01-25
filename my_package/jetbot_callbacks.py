@@ -45,6 +45,8 @@ class Callbacks:
         self.node.right_ranges = np.array(msg.ranges[90:135])
         self.node.rear_ranges = np.concatenate((msg.ranges[315:], msg.ranges[:46]))
 
+        self.node.robot_laser_pub.publish()
+
     def odom_callback(self, msg):
         if not self.node.running:  
             return

@@ -19,8 +19,8 @@ class RoomSearch(Node):
         #
         self.take_direction = TakeDirection(self)
         self.t_d = False
-        self.robot_coordinates = (0, 0)
-        self.cell_coordinates = (0, 0)
+        self.robot_coordinates = (0.0, 0.0)
+        self.cell_coordinates = (0.0, 0.0)
         #
 
         self.cmd_vel_pub = self.create_publisher(
@@ -94,8 +94,11 @@ class RoomSearch(Node):
         #
         if self.t_d == True:
             self.waiting_for_safe_angle = True # set to true to get all possible angles for changing direction 
-            self.get_logger().info(f"Dostalem koordynaty {(self.my_pose.x, self.my_pose.y)}")
-            self.start_changing_direction(self.take_direction.take_direction((self.my_pose.x, self.my_pose.y), self.cell_coordinates))
+
+            angle = self.take_direction.take_direction(self.robot_coordinates, self.cell_coordinates)
+
+            self.start_changing_direction(angle)
+            return
         # 
 
         if front_center_min > self.obstacle_distance_mid:
