@@ -69,13 +69,11 @@ class Head(Node):
         self.keyboard_thread = threading.Thread(target=self.keyboard_input, daemon=True)
         self.keyboard_thread.start()
 
-        self.robot_name = ""
-
-        self.status = ""
-
         self.image_saved = False
 
         self.robots_positions = {}
+
+        self.robot_name = ""
      
 
     def command_stop(self):
@@ -99,9 +97,9 @@ class Head(Node):
     
     def command_take_direction(self, index):
         msg = String()
-        msg.data = f'/jetbot|{self.index_to_world(index)}'
+        msg.data = f'{next(iter(self.robots_positions))}|{self.index_to_world(index)}'
         self.robot_command_pub.publish(msg)
-        self.get_logger().info("Sent direction!")
+        self.get_logger().info(f"Sent direction to {next(iter(self.robots_positions))}")
 
     def index_to_world(self, index):
         if 0 <= index < self.grid.info.width * self.grid.info.height:
@@ -113,11 +111,11 @@ class Head(Node):
             return self.get_logger().error("index_to_world: Index of cell outside of bonds of the array")   
 
     def detector_callback(self, msg):
-        self.robot_name, self.status = msg.data.split("|")
+        self.robot_name, status = msg.data.split("|")
 
-        if self.status == "Color detected!":
+        if status == "Color detected!":
             self.command_stop()
-            self.get_logger().info(self.robot_name + " " + self.status)
+            self.get_logger().info(self.robot_name + " " + status)
 
             self.get_logger().info(f'Object finded!')
             self.check_time()
@@ -169,7 +167,7 @@ class Head(Node):
 
     def grid_update_robot_position(self, msg):
 
-        robot_name, robot_position_x, robot_position_y = msg.data.split("|")
+        self.robot_name, robot_position_x, robot_position_y = msg.data.split("|")
 
         x, y = (float(robot_position_x), float(robot_position_y))
 
@@ -180,7 +178,7 @@ class Head(Node):
         grid_x = int((x - origin_x) / resolution)
         grid_y = int((y - origin_y) / resolution)
 
-        self.robots_positions[robot_name] = (grid_x, grid_y)
+        self.robots_positions[self.robot_name] = (grid_x, grid_y)
 
         if 0 <= grid_x < self.grid.info.width and 0 <= grid_y < self.grid.info.height:
             index = grid_y * self.grid.info.width + grid_x
@@ -203,7 +201,7 @@ class Head(Node):
         # grid_x = int((x - origin_x) / resolution)
         # grid_y = int((y - origin_y) / resolution)
 
-        # self.robots_positions[robot_name] = (grid_x, grid_y)
+        # self.robots_positions[self.robot_name] = (grid_x, grid_y)
 
         # if 0 <= grid_x < self.grid.info.width and 0 <= grid_y < self.grid.info.height:
         #     index = grid_y * self.grid.info.width + grid_x
@@ -226,7 +224,7 @@ class Head(Node):
 
             t = TransformStamped()
             t.header.stamp = self.get_clock().now().to_msg()
-            t.header.frame_id = 'base_link' # Parent
+            t.header.frame_id = 'mapmap' # Parent
             t.child_frame_id = 'grid'    # Child 
             t.transform.translation.x = 0.0
             t.transform.translation.y = 0.0

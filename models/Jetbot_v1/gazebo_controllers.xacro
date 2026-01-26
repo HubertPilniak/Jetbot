@@ -9,8 +9,8 @@
 				<namespace>${robot_name}</namespace>
             </ros>
 
-            <left_joint>leftWheel_joint</left_joint>
-            <right_joint>rightWheel_joint</right_joint>
+            <left_joint>${robot_name}/leftWheel_joint</left_joint>
+            <right_joint>${robot_name}/rightWheel_joint</right_joint>
             <wheel_separation>0.1863</wheel_separation>
             <wheel_diameter>0.065</wheel_diameter>
 
@@ -19,8 +19,8 @@
             <max_wheel_acceleration>10.0</max_wheel_acceleration>
 
             
-            <odometry_frame>odom</odometry_frame>
-            <robot_base_frame>base_link</robot_base_frame>
+            <odometry_frame>${robot_name}/odom</odometry_frame>
+            <robot_base_frame>${robot_name}/base_link</robot_base_frame>
 
             <publish_odom>true</publish_odom>
             <publish_odom_tf>true</publish_odom_tf>
@@ -30,7 +30,7 @@
     </gazebo>
 
 <!-- Gazebo Lidar control -->
-    <gazebo reference="laser_frame">
+    <gazebo reference="${robot_name}/laser_frame">
         <material>Gazebo/Black</material>
         <sensor name="laser" type="ray">
             <visualize>false</visualize>
@@ -54,13 +54,13 @@
     				<remapping>~/out:=scan</remapping>
                 </ros>
                 <output_type>sensor_msgs/LaserScan</output_type>
-                <frame_name>laser_frame</frame_name>
+                <frame_name>${robot_name}/laser_frame</frame_name>
             </plugin>
         </sensor>
     </gazebo>
 
 <!-- Gazebo Camera control -->
- 	<gazebo reference="camera_link">
+ 	<gazebo reference="${robot_name}/camera_link">
         <material>Gazebo/Black</material>
 
         <sensor name="camera" type="camera">
@@ -79,7 +79,7 @@
                 </clip>
             </camera>
             <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
-                <frame_name>camera_link</frame_name>
+                <frame_name>${robot_name}/camera_link</frame_name>
 
 				<ros>
 					<namespace>${robot_name}</namespace>

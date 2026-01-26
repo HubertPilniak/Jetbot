@@ -26,17 +26,17 @@
 	</material>
 
   
-	<link name="base_link"></link>
+	<link name="${robot_name}/base_link"></link>
 	
-<!--Chassis-->
+<!--Chassis"-->
 
-	<joint name="chassis_joint" type="fixed">
+	<joint name="${robot_name}/chassis_joint" type="fixed">
   		<origin xyz="0.0 0.0 0.0325" rpy="0 0 0"/>
-  		<parent link="base_link"/>
-  		<child link="chassis"/>
+  		<parent link="${robot_name}/base_link"/>
+  		<child link="${robot_name}/chassis"/>
 	</joint>
   
-    <link name='chassis'>
+    <link name='${robot_name}/chassis'>
 		<xacro:inertial_cylinder mass="2.8943" radius="0.106625" length="0.01">
 			<origin xyz="0.0 0.0 0.015" rpy="0 0 0"/>
 		</xacro:inertial_cylinder>
@@ -93,22 +93,22 @@
 		</visual>
 	</link>
 
-	<gazebo reference="chassis">
+	<gazebo reference="${robot_name}/chassis">
 		<material>Gazebo/Green</material>
 	</gazebo>
 		
 
 <!--Left Wheel-->
 
-	<joint name="leftWheel_joint" type="continuous">
-  		<parent link="chassis"/>
-  		<child link="leftWheel"/>
+	<joint name="${robot_name}/leftWheel_joint" type="continuous">
+  		<parent link="${robot_name}/chassis"/>
+  		<child link="${robot_name}/leftWheel"/>
 		<origin xyz="0.0 0.09315 0.0" rpy="-1.5707 0 0"/>
 		<axis xyz="0 0 1"/>
 	</joint>
   
 
-    <link name='leftWheel'>
+    <link name='${robot_name}/leftWheel'>
 		<xacro:inertial_cylinder mass="0.031" radius="0.0325" length="0.027">
 			<origin xyz="0 0 0" rpy="0 0 0"/>
 		</xacro:inertial_cylinder>
@@ -125,7 +125,7 @@
 		</collision>
 	</link>
 
-	<gazebo reference="leftWheel">
+	<gazebo reference="${robot_name}/leftWheel">
 		<material>Gazebo/Blue</material>
 		<mu1 value="1.0"/>
 		<mu2 value="1.0"/>
@@ -133,15 +133,15 @@
 
 <!--Right Wheel-->
 
-	<joint name="rightWheel_joint" type="continuous">
-  		<parent link="chassis"/>
-  		<child link="rightWheel"/>
+	<joint name="${robot_name}/rightWheel_joint" type="continuous">
+  		<parent link="${robot_name}/chassis"/>
+  		<child link="${robot_name}/rightWheel"/>
 		<origin xyz="0.0 -0.09315 0.0" rpy="1.5707 0 0"/>
 		<axis xyz="0 0 -1"/>
 	</joint>
   
 
-    <link name='rightWheel'>
+    <link name='${robot_name}/rightWheel'>
 		<xacro:inertial_cylinder mass="0.031" radius="0.0325" length="0.027">
 			<origin xyz="0 0 0" rpy="0 0 0"/>
 		</xacro:inertial_cylinder>
@@ -158,7 +158,7 @@
 		</collision>
 	</link>
 
-	<gazebo reference="rightWheel">
+	<gazebo reference="${robot_name}/rightWheel">
 		<material>Gazebo/Blue</material>
 		<mu1 value="1.0"/>
 		<mu2 value="1.0"/>
@@ -166,14 +166,14 @@
 
 <!--Front Caster-->
 
-	<joint name="frontCaster_joint" type="fixed">
-  		<parent link="chassis"/>
-  		<child link="frontCaster"/>
+	<joint name="${robot_name}/frontCaster_joint" type="fixed">
+  		<parent link="${robot_name}/chassis"/>
+  		<child link="${robot_name}/frontCaster"/>
 		<origin xyz="0.09315 0.0 0.0" rpy="0 0 0"/>
 	</joint>
   
 
-    <link name='frontCaster'>
+    <link name='${robot_name}/frontCaster'>
 		<xacro:inertial_sphere mass="0.022" radius="0.022">
 			<origin xyz="0 0 -0.01" rpy="0 0 0"/>
 		</xacro:inertial_sphere>
@@ -192,7 +192,7 @@
 		</collision>
 	</link>
 
-	<gazebo reference="frontCaster">
+	<gazebo reference="${robot_name}/frontCaster">
 		<material>Gazebo/Black</material>
 		<mu1 value="0.01"/>
 		<mu2 value="0.01"/>
@@ -200,14 +200,14 @@
 
 <!--Rear Caster-->
 
-	<joint name="rearCaster_joint" type="fixed">
-  		<parent link="chassis"/>
-  		<child link="rearCaster"/>
+	<joint name="${robot_name}/rearCaster_joint" type="fixed">
+  		<parent link="${robot_name}/chassis"/>
+  		<child link="${robot_name}/rearCaster"/>
 		<origin xyz="-0.09315 0.0 0.0" rpy="0 0 0"/>
 	</joint>
   
 
-    <link name='rearCaster'>
+    <link name='${robot_name}/rearCaster'>
 		<xacro:inertial_sphere mass="0.022" radius="0.022">
 			<origin xyz="0 0 -0.01" rpy="0 0 0"/>
 		</xacro:inertial_sphere>
@@ -226,7 +226,7 @@
 		</collision>
 	</link>
 
-	<gazebo reference="rearCaster">
+	<gazebo reference="${robot_name}/rearCaster">
 		<material>Gazebo/Black</material>
 		<mu1 value="0.01"/>
 		<mu2 value="0.01"/>

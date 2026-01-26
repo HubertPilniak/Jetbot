@@ -111,11 +111,17 @@ def generate_launch_description():
         namespace=robot_name,
         output='screen',
         parameters=[{
-            'base_frame': f'{robot_name}/base_link',
-            'odom_frame': f'{robot_name}/odom',
-            'map_frame':  f'{robot_name}/map',
+            'base_frame': [robot_name, '/base_link'],
+            'odom_frame': [robot_name, '/odom'],
+            'map_frame':  [robot_name, '/map'],
             'scan_topic': 'scan',
-            'use_sim_time': use_sim_time
+            'use_sim_time': use_sim_time,
+            'map_update_interval': 1.0,      # map rewfresh
+            'resolution': 0.1,             #  resolution of the map in cm
+            'minimum_time_interval': 0.2,    # time between scans
+            'transform_timeout': 0.2,
+            'min_laser_range': 0.1,
+            'max_laser_range': 10.0, 
         }]
     )
     

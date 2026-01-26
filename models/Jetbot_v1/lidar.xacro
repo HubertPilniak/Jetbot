@@ -4,13 +4,13 @@
 
     <!--Lidar-->
 
-	<joint name="laser_joint" type="fixed">
-        <parent link="chassis"/>
-        <child link="laser_frame"/>
+	<joint name="${robot_name}/laser_joint" type="fixed">
+        <parent link="${robot_name}/chassis"/>
+        <child link="${robot_name}/laser_frame"/>
         <origin xyz="0.0 0.0 0.11935" rpy=" 0 0 0 "/>
     </joint>
 
-    <link name="laser_frame">
+    <link name="${robot_name}/laser_frame">
         <xacro:inertial_cylinder mass="0.01" radius="0.0325" length="0.027">
 			<origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
 		</xacro:inertial_cylinder>
