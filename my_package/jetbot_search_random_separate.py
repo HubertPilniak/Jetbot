@@ -9,6 +9,7 @@ import random
 import math
 
 from my_package.jetbot_callbacks import Callbacks
+from my_package.search import Search
 
 
 class RoomSearch(Node):
@@ -16,6 +17,8 @@ class RoomSearch(Node):
         super().__init__('room_search')
 
         self.callbacks = Callbacks(self)
+
+        self.search = Search(self)
         
         self.cmd_vel_pub = self.create_publisher(
             Twist, 
@@ -52,7 +55,7 @@ class RoomSearch(Node):
             10
         )
 
-        self.timer = self.create_timer(0.1, self.search)
+        self.timer = self.create_timer(0.1, self.run)
 
         self.twist = Twist()
 
@@ -87,15 +90,9 @@ class RoomSearch(Node):
 
         self.robot_distance_min = 2.0
 
-    def search(self):
+    def run(self):
         if not self.running:
             return
-
-        front_center_min = np.min(self.front_ranges[15:76]) # ranges[15:76] -> front scan from lidar; 60 degrees;
-
-
-        self.twist.linear.x = 0.0
-        self.twist.angular.z = 0.0
 
         angle = self.check_distances_and_separate() # check distances and if robots are to close separate them
         
@@ -103,28 +100,8 @@ class RoomSearch(Node):
             self.waiting_for_safe_angle = True # set to true to get all possible angles for changing direction 
             self.start_changing_direction(angle)
             return
-
-
-        if front_center_min > self.obstacle_distance_mid:
-            self.twist.linear.x = 0.2
-
-            self.avoid_side_collisions()
-
-        elif front_center_min > self.obstacle_distance_min:
-            self.twist.linear.x = 0.05
-
-            self.avoid_front_side_collisions()
-
-            self.avoid_side_collisions()
-            
-        else:
-            self.cmd_vel_pub.publish(self.twist)
-
-            self.start_changing_direction(None)
-
-            return
         
-        self.cmd_vel_pub.publish(self.twist)
+        self.search.search(self)
 
     def change_direction(self, turn, angle):
         if not self.running:  
@@ -201,20 +178,6 @@ class RoomSearch(Node):
                             
         return safe_angles
 
-    def avoid_side_collisions(self):
-        left_min = np.min(self.left_ranges)
-        right_min = np.min(self.right_ranges)
-
-    # if something is close from left side
-        if left_min < self.side_obstacle_distance_min:
-            self.twist.linear.x = 0.0
-            self.twist.angular.z -= 0.1  # turn a little bit right
-
-    # if something is close from right side
-        if right_min < self.side_obstacle_distance_min:
-            self.twist.linear.x = 0.0
-            self.twist.angular.z += 0.1  # turn a little bit left
-
     def start_changing_direction(self, prefered_angle):
 
 
@@ -255,17 +218,6 @@ class RoomSearch(Node):
         angle_to_rotate = angle_to_rotate * 0.99  # due to imperfections of calculations of this program and simulation we make a lower tolerance of 1%
 
         self.timer = self.create_timer(0.1, lambda: self.change_direction(turn, angle_to_rotate))
-
-    def avoid_front_side_collisions(self):  # if obstacle is not in front of robot, turn from it
-        front_right_min = np.min(self.front_ranges[:15])
-        front_left_min = np.min(self.front_ranges[76:])
-
-        if front_left_min < self.obstacle_distance_min: 
-            self.twist.angular.z = -0.1 # turn right
-
-        elif front_right_min < self.obstacle_distance_min:
-
-            self.twist.angular.z = 0.1 # turn left
 
     def update_robots_positions_and_distances(self, msg):
 

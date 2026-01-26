@@ -104,6 +104,20 @@ def generate_launch_description():
         executable='jetbot_pather',
         namespace=robot_name
     )
+
+    slam = Node(
+        package='slam_toolbox',
+        executable='async_slam_toolbox_node',
+        namespace=robot_name,
+        output='screen',
+        parameters=[{
+            'base_frame': f'{robot_name}/base_link',
+            'odom_frame': f'{robot_name}/odom',
+            'map_frame':  f'{robot_name}/map',
+            'scan_topic': 'scan',
+            'use_sim_time': use_sim_time
+        }]
+    )
     
     return LaunchDescription([
         DeclareLaunchArgument('use_sim_time', default_value='true', description='Use sim time if true'),
@@ -119,5 +133,6 @@ def generate_launch_description():
         # joint_broad_spawner,
         detector_start,
         search_start,
-        pather_start
+        pather_start,
+        slam
     ])

@@ -20,16 +20,16 @@ class Callbacks:
             self.node.cmd_vel_pub.publish(self.node.twist)
         #
         if msg.data.__contains__("|"):
-            robot_name, robot_coordinates, cell_coordinates = msg.data.split("|")
+            robot_name, cell_coordinates = msg.data.split("|")
 
             if robot_name == self.node.get_namespace():
-                self.node.get_logger().info(f"Dostalem koordynaty {robot_coordinates}, {cell_coordinates}")
-                self.node.robot_coordinates = ast.literal_eval(robot_coordinates)
+                self.node.get_logger().info(f"Dostalem koordynaty {cell_coordinates}")
                 self.node.cell_coordinates = ast.literal_eval(cell_coordinates)
                 self.node.t_d = True
         #
 
     def laser_callback(self, msg):
+
         self.node.ranges = np.array(msg.ranges)
 
         if np.min(self.node.ranges) < self.node.critical_distance:
@@ -44,13 +44,10 @@ class Callbacks:
         self.node.left_ranges = np.array(msg.ranges[226:276])
         self.node.right_ranges = np.array(msg.ranges[90:135])
         self.node.rear_ranges = np.concatenate((msg.ranges[315:], msg.ranges[:46]))
-
-        self.node.robot_laser_pub.publish()
-
-    def odom_callback(self, msg):
-        if not self.node.running:  
-            return
         
+
+    def odom_callback(self, msg):  
+
         self.node.my_pose = msg.pose.pose.position
         self.node.my_orientation = msg.pose.pose.orientation
 

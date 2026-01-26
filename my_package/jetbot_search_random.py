@@ -8,7 +8,8 @@ import numpy as np
 import random
 
 from my_package.jetbot_callbacks import Callbacks
-from my_package.jetbot_change_direction import TakeDirection
+from my_package.search import Search
+from my_package.jetbot_take_direction import TakeDirection
 
 
 class RoomSearch(Node):
@@ -16,10 +17,11 @@ class RoomSearch(Node):
         super().__init__('room_search')
 
         self.callbacks = Callbacks(self)
+
+        self.search = Search(self)
         #
         self.take_direction = TakeDirection(self)
         self.t_d = False
-        self.robot_coordinates = (0.0, 0.0)
         self.cell_coordinates = (0.0, 0.0)
         #
 
@@ -52,7 +54,7 @@ class RoomSearch(Node):
             10
         )
 
-        self.timer = self.create_timer(0.1, self.search)
+        self.timer = self.create_timer(0.1, self.run)
 
         self.twist = Twist()
 
@@ -81,46 +83,20 @@ class RoomSearch(Node):
 
         self.waiting_for_safe_angle = False
 
-    def search(self):
+    def run(self):
         if not self.running:
             return
-
-        front_center_min = np.min(self.front_ranges[15:76]) # ranges[15:76] -> front scan from lidar; 61 degrees;
-
-
-        self.twist.linear.x = 0.0
-        self.twist.angular.z = 0.0
-
         #
         if self.t_d == True:
             self.waiting_for_safe_angle = True # set to true to get all possible angles for changing direction 
 
-            angle = self.take_direction.take_direction(self.robot_coordinates, self.cell_coordinates)
+            angle = self.take_direction.take_direction(self.my_pose, self.cell_coordinates)
 
             self.start_changing_direction(angle)
             return
         # 
 
-        if front_center_min > self.obstacle_distance_mid:
-            self.twist.linear.x = 0.2
-
-            self.avoid_side_collisions()
-
-        elif front_center_min > self.obstacle_distance_min:
-            self.twist.linear.x = 0.05
-
-            self.avoid_front_side_collisions()
-
-            self.avoid_side_collisions()
-            
-        else:
-            self.cmd_vel_pub.publish(self.twist)
-
-            self.start_changing_direction(None)
-
-            return
-        
-        self.cmd_vel_pub.publish(self.twist)
+        self.search.search()
 
     def change_direction(self, turn, angle):
         if not self.running:  
@@ -132,7 +108,7 @@ class RoomSearch(Node):
 
             if self.quaternion_angle(self.my_orientation, self.initial_orientation) >= angle: # we assume that we end rotation when we are equal or above expected angle
                 self.timer.cancel()
-                self.timer = self.create_timer(0.1, self.search)
+                self.timer = self.create_timer(0.1, self.run)
         
         else:
             self.twist.linear.x = 0.0
@@ -197,20 +173,6 @@ class RoomSearch(Node):
                             
         return safe_angles
 
-    def avoid_side_collisions(self):
-        left_min = np.min(self.left_ranges)
-        right_min = np.min(self.right_ranges)
-
-    # if something is close from left side
-        if left_min < self.side_obstacle_distance_min:
-            self.twist.linear.x = 0.0
-            self.twist.angular.z -= 0.1  # turn a little bit right
-
-    # if something is close from right side
-        if right_min < self.side_obstacle_distance_min:
-            self.twist.linear.x = 0.0
-            self.twist.angular.z += 0.1  # turn a little bit left
-
     def start_changing_direction(self, prefered_angle):
 
 
@@ -254,17 +216,7 @@ class RoomSearch(Node):
         angle_to_rotate = angle_to_rotate * 0.99  # due to imperfections of calculations of this program and simulation we make a lower tolerance of 1%
 
         self.timer = self.create_timer(0.1, lambda: self.change_direction(turn, angle_to_rotate))
-
-    def avoid_front_side_collisions(self):  # if obstacle is not in front of robot, turn from it
-        front_right_min = np.min(self.front_ranges[:15])
-        front_left_min = np.min(self.front_ranges[76:])
-
-        if front_left_min < self.obstacle_distance_min: 
-            self.twist.angular.z = -0.1 # turn right
-
-        elif front_right_min < self.obstacle_distance_min:
-
-            self.twist.angular.z = 0.1 # turn left
+  
 
 def main(args=None):
     rclpy.init(args=args)

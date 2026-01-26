@@ -48,6 +48,12 @@ class Head(Node):
             self.grid_update_robot_position,
             10
         )
+        self.laser_data_sub = self.create_subscription(
+            String,
+            '/jetbot/scan',
+            self.grid_update_obstacles_positions,
+            10
+        )
 
 
         self.declare_parameter('map_width', 10.0)
@@ -93,15 +99,15 @@ class Head(Node):
     
     def command_take_direction(self, index):
         msg = String()
-        msg.data = f'/jetbot|{self.robots_positions["/jetbot"]}|{self.index_to_world(index)}'
+        msg.data = f'/jetbot|{self.index_to_world(index)}'
         self.robot_command_pub.publish(msg)
         self.get_logger().info("Sent direction!")
 
     def index_to_world(self, index):
         if 0 <= index < self.grid.info.width * self.grid.info.height:
 
-            x = index // self.grid.info.width + self.grid.info.origin.position.x
-            y = index % self.grid.info.height + self.grid.info.origin.position.y
+            x = (index % self.grid.info.width * self.grid.info.resolution) + self.grid.info.origin.position.x + (self.grid.info.resolution / 2.0)
+            y = (index // self.grid.info.height * self.grid.info.resolution) + self.grid.info.origin.position.y + (self.grid.info.resolution / 2.0)
             return x, y
         else:
             return self.get_logger().error("index_to_world: Index of cell outside of bonds of the array")   
@@ -182,7 +188,30 @@ class Head(Node):
             self.grid.data[index] = 1
             
             self.grid.header.stamp = self.get_clock().now().to_msg()
-            self.grid_pub.publish(self.grid)       
+            self.grid_pub.publish(self.grid)      
+
+    def grid_update_obstacles_positions(self, msg):
+
+        ranges = np.array(msg.ranges)
+
+        # x, y = (float(robot_position_x), float(robot_position_y))
+
+        # resolution = self.grid.info.resolution
+        # origin_x = self.grid.info.origin.position.x
+        # origin_y = self.grid.info.origin.position.y
+
+        # grid_x = int((x - origin_x) / resolution)
+        # grid_y = int((y - origin_y) / resolution)
+
+        # self.robots_positions[robot_name] = (grid_x, grid_y)
+
+        # if 0 <= grid_x < self.grid.info.width and 0 <= grid_y < self.grid.info.height:
+        #     index = grid_y * self.grid.info.width + grid_x
+            
+        #     self.grid.data[index] = 1
+            
+        #     self.grid.header.stamp = self.get_clock().now().to_msg()
+        #     self.grid_pub.publish(self.grid)    
 
     def grid_create(self, width, height):
         if width > 0.0 and height > 0.0:
@@ -193,12 +222,12 @@ class Head(Node):
             self.grid.info.width = int(width / resolution)
             self.grid.info.height = int(height / resolution)
             self.grid.info.resolution = resolution
-            self.grid.header.frame_id = "map"
+            self.grid.header.frame_id = "grid"
 
             t = TransformStamped()
             t.header.stamp = self.get_clock().now().to_msg()
             t.header.frame_id = 'base_link' # Parent
-            t.child_frame_id = 'map'    # Child 
+            t.child_frame_id = 'grid'    # Child 
             t.transform.translation.x = 0.0
             t.transform.translation.y = 0.0
             t.transform.translation.z = 0.0

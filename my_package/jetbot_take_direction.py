@@ -6,8 +6,8 @@ class TakeDirection:
     
     def take_direction(self, robot_coordinates, cell_coordinates):
 
-        dx =  robot_coordinates[0] - cell_coordinates[0] 
-        dy =  robot_coordinates[1] - cell_coordinates[1] 
+        dx =  robot_coordinates.x - cell_coordinates[0] 
+        dy =  robot_coordinates.y - cell_coordinates[1] 
 
         angle = math.atan2(dy, dx) - math.pi
 
