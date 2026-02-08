@@ -25,12 +25,12 @@ def generate_launch_description():
     )
     
     jetbots = []
-    for i, (name, y) in enumerate([("jetbot_1", "0.0"), ("jetbot_2", "1.0"), ("jetbot_3", "-1.0")]):
+    for i, (name, y, slam_enable) in enumerate([("jetbot_1", "0.0", "true"), ("jetbot_2", "1.0", "false"), ("jetbot_3", "-1.0", "false")]):
         jetbot = IncludeLaunchDescription(
             PythonLaunchDescriptionSource([
                 os.path.join(get_package_share_directory('my_package'), 'launch', 'jetbot_sim.launch.py')
             ]),
-            launch_arguments={'robot_name': name, 'y': y, 'search_type': search_type}.items()
+            launch_arguments={'robot_name': name, 'y': y, 'slam_enable': slam_enable, 'search_type': search_type}.items()
         )
 
         jetbots.append(TimerAction(period=i * 5.0, actions=[jetbot]))

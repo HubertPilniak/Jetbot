@@ -281,6 +281,7 @@ class Head(Node):
         plt.close()
         print(f"Occupancy grid saved as: {filename}")
 
+
 def main(args=None):
     rclpy.init(args=args)
     head = Head() 
