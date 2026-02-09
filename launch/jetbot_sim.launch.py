@@ -93,22 +93,30 @@ def generate_launch_description():
                    ],
     )
 
-    detector_start = Node(
+    detector = Node(
         package='my_package',
         executable='jetbot_detect',
         namespace=robot_name
     )
 
-    search_start = Node(
+    search = Node(
         package='my_package',
         executable=['jetbot_search_', search_type],
         namespace=robot_name
     )
 
-    pather_start = Node(
+    pather = Node(
         package='my_package',
         executable='jetbot_pather',
         namespace=robot_name
+    )
+
+    static_transform = Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            namespace=robot_name,
+            name=[robot_name, '_static_transform'],
+            arguments=[x, y, '0', '0', '0', '0', 'world', [robot_name, '/map']]
     )
 
     slam = Node(
@@ -120,68 +128,24 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'mode': 'mapping',
-            'map_frame': '/map',
+            'map_frame': [robot_name, '/map'],
             'base_frame': [robot_name, '/base_link'],
             'odom_frame': [robot_name, '/odom'],
             'scan_topic': 'scan',
-            'use_sim_time': use_sim_time,  
-            'map_update_interval': 2.0,      # update of map, interval of map sending
-            'resolution': 0.1,               # resolution of the map in cm
+            'use_sim_time': use_sim_time,
+            'map_update_interval': 1.0,      # update of map, interval of map sending
+            'resolution': 0.05,               # resolution of the map in cm
             'minimum_time_interval': 0.2,    # time between scans
             'transform_publish_period': 0.05,
             'transform_timeout': 0.2,        # how long system waits for transformation before resolving it as outdated
             'min_laser_range': 0.1,
-            'max_laser_range': 10.0 
-        }]
-    )
-
-    amcl = Node(
-        condition=UnlessCondition(slam_enable),
-        package='nav2_amcl',
-        executable='amcl',
-        name='amcl',
-        namespace=robot_name,
-        output='screen',
-        parameters=[{
-            'use_sim_time': use_sim_time,
-            'autostart': True,
-
-            # --- Frames ---
-            'global_frame_id': 'map',
-            'odom_frame_id': [robot_name, '/odom'],
-            'base_frame_id': [robot_name, '/base_link'],
-
-            # --- Topics ---
-            'scan_topic': 'scan',
-
-            # --- AMCL parameters ---
-            'min_particles': 500,
-            'max_particles': 2000,
-            'resample_interval': 1,
-            'transform_tolerance': 0.2,
-
-            # Motion model
-            'alpha1': 0.2,
-            'alpha2': 0.2,
-            'alpha3': 0.2,
-            'alpha4': 0.2,
-            'alpha5': 0.1,
-
-            # Sensor model
-            'laser_model_type': 'likelihood_field',
-            'z_hit': 0.5,
-            'z_short': 0.05,
-            'z_max': 0.05,
-            'z_rand': 0.5,
-            'sigma_hit': 0.2,
-
-            'laser_max_range': 10.0,
-            'laser_min_range': 0.1,
-
-            # Update thresholds
-            'update_min_d': 0.25,
-            'update_min_a': 0.2,
-        }]
+            'max_laser_range': 10.0,
+            'ceres_thread_count': 6
+        }],
+        remappings=[
+            ('/map', 'map'),
+            ('/map_metadata', 'map_metadata')
+        ]
     )
     
     return LaunchDescription([
@@ -198,9 +162,9 @@ def generate_launch_description():
         spawn_entity,
         # diff_drive_spawner,
         # joint_broad_spawner,
-        detector_start,
-        search_start,
-        pather_start,
-        slam,
-        amcl
+        detector,
+        search,
+        pather,
+        static_transform,
+        slam
     ])

@@ -54,6 +54,12 @@ class Head(Node):
             self.grid_update_obstacles_positions,
             10
         )
+        self.command_sub = self.create_subscription(
+            String,
+            '/head/command',
+            self.command_callback,
+            10
+        )
 
 
         self.declare_parameter('map_width', 10.0)
@@ -126,8 +132,26 @@ class Head(Node):
                 self.save_image_once,
                 1
             )
+    
+    def command_callback(self, msg):
+        cmd = msg.data.lower()
 
-    def keyboard_input(self):
+        command = cmd[0].lower()
+        args = cmd[1] 
+
+        if command.lower() == "start":
+            self.command_start()
+                
+        elif command.lower() == "stop":
+            self.command_stop()
+
+        elif command.lower() == "hop":
+            if args:
+                self.command_take_direction(int(args))
+            else:
+                print("Error: 'hop' requires a value.")
+
+    def keyboard_input(self):               # works only on terminal where head.py is runed not by launch file 
         while True:
             user_input = input().strip().split()
             
@@ -142,7 +166,7 @@ class Head(Node):
 
             elif command.lower() == "hop":
                 if args:
-                    self.command_take_direction(int(args[0]))
+                    self.command_take_direction(int(args))
                 else:
                     print("Error: 'hop' requires a value.")
     

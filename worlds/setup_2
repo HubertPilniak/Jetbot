@@ -91,18 +91,18 @@
       <heading_deg>0</heading_deg>
     </spherical_coordinates>
     <state world_name='default'>
-      <sim_time>5382 722000000</sim_time>
-      <real_time>52 52904886</real_time>
-      <wall_time>1745952275 251141502</wall_time>
-      <iterations>50380</iterations>
-      <model name='RedBox'>
-        <pose>-3.44032 3.18614 0.15 0 -1e-06 -0.000327</pose>
+      <sim_time>5391 875000000</sim_time>
+      <real_time>9 223394526</real_time>
+      <wall_time>1770604404 27244111</wall_time>
+      <iterations>9153</iterations>
+      <model name='RedBox2'>
+        <pose>-3.44032 3.18614 0.05 0 1e-06 -0.000324</pose>
         <scale>1 1 1</scale>
         <link name='link_0'>
-          <pose>-3.44032 3.18614 0.15 0 -1e-06 -0.000327</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>-0.383184 0.014858 -0.114327 3.07558 -0.580788 -3.14122</acceleration>
-          <wrench>-0.383184 0.014858 -0.114327 0 -0 0</wrench>
+          <pose>-3.44032 3.18614 0.05 0 1e-06 -0.000324</pose>
+          <velocity>8e-05 2e-06 2.5e-05 -1.8e-05 0.001607 1.6e-05</velocity>
+          <acceleration>0.145475 0.003471 0.064711 3.10566 0.225819 -3.14151</acceleration>
+          <wrench>0.145475 0.003471 0.064711 0 -0 0</wrench>
         </link>
       </model>
       <model name='Square_10mx10m_0'>
@@ -158,9 +158,9 @@
         <scale>1 1 1</scale>
         <link name='link'>
           <pose>1.08417 4.5494 0.149 0 0 -0.000101</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>-0 -1.9e-05 0 0.000128 -2e-06 0</acceleration>
-          <wrench>-1e-06 -3.8e-05 1e-06 0 -0 0</wrench>
+          <velocity>0 0 5e-06 0 -0 0</velocity>
+          <acceleration>0 1.9e-05 -0 -0.000128 2e-06 0</acceleration>
+          <wrench>1e-06 3.8e-05 -1e-06 0 -0 0</wrench>
         </link>
       </model>
       <model name='cardboard_box_0'>
@@ -168,7 +168,7 @@
         <scale>1 1 1</scale>
         <link name='link'>
           <pose>-2.7336 3.12847 0.148999 0 -0 0</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
+          <velocity>-0 -0 7e-06 3e-06 -0 0</velocity>
           <acceleration>-0 0 0 -0 -0 -0</acceleration>
           <wrench>-0 0 0 0 -0 0</wrench>
         </link>
@@ -178,9 +178,9 @@
         <scale>1 1 1</scale>
         <link name='link'>
           <pose>1.0838 -4.54469 0.149 0 0 -9.3e-05</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>-0 -1.9e-05 0 0.000128 -2e-06 0</acceleration>
-          <wrench>-1e-06 -3.8e-05 1e-06 0 -0 0</wrench>
+          <velocity>0 0 5e-06 0 -0 0</velocity>
+          <acceleration>0 1.9e-05 -0 -0.000128 2e-06 0</acceleration>
+          <wrench>1e-06 3.8e-05 -1e-06 0 -0 0</wrench>
         </link>
       </model>
       <model name='cardboard_box_2'>
@@ -188,9 +188,9 @@
         <scale>1 1 1</scale>
         <link name='link'>
           <pose>-2.71119 2.70248 0.149 0 0 -0.000194</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>-0 -1.9e-05 0 0.000128 -2e-06 0</acceleration>
-          <wrench>-1e-06 -3.8e-05 1e-06 0 -0 0</wrench>
+          <velocity>0 0 5e-06 0 -0 0</velocity>
+          <acceleration>0 1.9e-05 -0 -0.000128 2e-06 0</acceleration>
+          <wrench>1e-06 3.8e-05 -1e-06 0 -0 0</wrench>
         </link>
       </model>
       <model name='cardboard_box_3'>
@@ -198,9 +198,9 @@
         <scale>1 1 1</scale>
         <link name='link'>
           <pose>3.11266 2.59939 0.149 0 0 -9.4e-05</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>-0 -1.9e-05 0 0.000128 -2e-06 0</acceleration>
-          <wrench>-1e-06 -3.8e-05 1e-06 0 -0 0</wrench>
+          <velocity>0 0 5e-06 0 -0 0</velocity>
+          <acceleration>0 1.9e-05 -0 -0.000128 2e-06 0</acceleration>
+          <wrench>1e-06 3.8e-05 -1e-06 0 -0 0</wrench>
         </link>
       </model>
       <model name='cardboard_box_4'>
@@ -208,7 +208,7 @@
         <scale>1 1 1</scale>
         <link name='link'>
           <pose>-2.50928 3.13011 0.447999 -0 -0 -1e-06</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
+          <velocity>0 -1e-06 1.1e-05 3e-06 3e-06 0</velocity>
           <acceleration>-0 0 0 -0 -0 -0</acceleration>
           <wrench>-0 0 0 0 -0 0</wrench>
         </link>
@@ -218,7 +218,7 @@
         <scale>1 1 1</scale>
         <link name='link'>
           <pose>-2.25937 3.08769 0.148999 0 -0 1.57088</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
+          <velocity>-0 -0 7e-06 3e-06 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
         </link>
@@ -228,19 +228,19 @@
         <scale>1 1 1</scale>
         <link name='link'>
           <pose>3.68647 2.53536 0.149 0 -0 0.474836</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>7e-06 -1.3e-05 0 8.6e-05 5.6e-05 0</acceleration>
-          <wrench>1.3e-05 -2.5e-05 1e-06 0 -0 0</wrench>
+          <velocity>-0 0 5e-06 -0 -0 -0</velocity>
+          <acceleration>-7e-06 1.3e-05 -0 -8.6e-05 -5.6e-05 0</acceleration>
+          <wrench>-1.3e-05 2.5e-05 -1e-06 0 -0 0</wrench>
         </link>
       </model>
       <model name='first_2015_trash_can'>
-        <pose>3.67348 3.31531 -2e-06 -8e-06 1e-05 -0.007333</pose>
+        <pose>3.6735 3.3153 -1e-06 6e-06 1.8e-05 -0.007531</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose>3.67348 3.31531 -2e-06 -8e-06 1e-05 -0.007333</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>4.23078 -1.12011 3.68906 1.3281 -1.39177 0.480575</acceleration>
-          <wrench>20.4379 -5.41098 17.8209 0 -0 0</wrench>
+          <pose>3.6735 3.3153 -1e-06 6e-06 1.8e-05 -0.007531</pose>
+          <velocity>3e-06 1.9e-05 0.004768 0.001742 -0.005363 -9e-05</velocity>
+          <acceleration>-7.35384 1.1454 8.14917 -2.86768 -1.15416 0.226745</acceleration>
+          <wrench>-35.5246 5.53313 39.3667 0 -0 0</wrench>
         </link>
       </model>
       <model name='ground_plane'>
@@ -289,7 +289,7 @@
     </state>
     <gui fullscreen='0'>
       <camera name='user_camera'>
-        <pose>5.42765 0.141345 18.094 0 1.3178 2.94588</pose>
+        <pose>-3.94438 4.67373 0.860964 -0 0.365066 -1.25239</pose>
         <view_controller>orbit</view_controller>
         <projection_type>perspective</projection_type>
       </camera>
@@ -1940,7 +1940,7 @@
       <allow_auto_disable>1</allow_auto_disable>
       <pose>0.519324 8.70561 0 0 -0 0</pose>
     </model>
-    <model name='RedBox'>
+    <model name='RedBox2'>
       <link name='link_0'>
         <inertial>
           <mass>1</mass>
@@ -1963,7 +1963,7 @@
           <pose>0 0 0 0 -0 0</pose>
           <geometry>
             <box>
-              <size>0.1 0.1 0.3</size>
+              <size>0.1 0.1 0.1</size>
             </box>
           </geometry>
           <material>
@@ -1989,7 +1989,7 @@
           <pose>0 0 0 0 -0 0</pose>
           <geometry>
             <box>
-              <size>0.1 0.1 0.3</size>
+              <size>0.1 0.1 0.1</size>
             </box>
           </geometry>
           <surface>
@@ -2041,7 +2041,7 @@
       </link>
       <static>0</static>
       <allow_auto_disable>1</allow_auto_disable>
-      <pose>-3.44031 3.18613 0 0 -0 0</pose>
+      <pose>-3.44032 3.18614 0.15 0 -0 -0.000282</pose>
     </model>
   </world>
 </sdf>

@@ -91,18 +91,18 @@
       <heading_deg>0</heading_deg>
     </spherical_coordinates>
     <state world_name='default'>
-      <sim_time>5610 323000000</sim_time>
-      <real_time>65 95420036</real_time>
-      <wall_time>1745952346 276863314</wall_time>
-      <iterations>64083</iterations>
-      <model name='RedBox'>
-        <pose>-3.51067 3.21262 0.149998 4e-06 -1e-06 -0.000321</pose>
+      <sim_time>5687 428000000</sim_time>
+      <real_time>77 569262414</real_time>
+      <wall_time>1770604545 579641315</wall_time>
+      <iterations>77105</iterations>
+      <model name='RedBox2'>
+        <pose>4.78122 0.697917 0.05 1e-06 -0 -2.3e-05</pose>
         <scale>1 1 1</scale>
         <link name='link_0'>
-          <pose>-3.51067 3.21262 0.149998 4e-06 -1e-06 -0.000321</pose>
+          <pose>4.78122 0.697917 0.05 1e-06 -0 -2.3e-05</pose>
           <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 -9.8 0 -0 0</acceleration>
-          <wrench>0 0 -9.8 0 -0 0</wrench>
+          <acceleration>0.003507 -0.143903 -0.041524 2.88436 0.036813 -4.3e-05</acceleration>
+          <wrench>0.003507 -0.143903 -0.041524 0 -0 0</wrench>
         </link>
       </model>
       <model name='Square_10mx10m_0'>
@@ -169,8 +169,8 @@
         <link name='link'>
           <pose>-2.7336 3.12847 0.148999 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>-0 0 0 -0 -0 -0</acceleration>
-          <wrench>-0 0 0 0 -0 0</wrench>
+          <acceleration>-0 0 -0 -0 -0 -0</acceleration>
+          <wrench>-0 0 -0 0 -0 0</wrench>
         </link>
       </model>
       <model name='cardboard_box_1'>
@@ -219,8 +219,8 @@
         <link name='link'>
           <pose>-2.25937 3.08769 0.148999 0 -0 1.57088</pose>
           <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
+          <acceleration>-0 0 -0 -0 -0 -0</acceleration>
+          <wrench>-0 0 -0 0 -0 0</wrench>
         </link>
       </model>
       <model name='cardboard_box_6'>
@@ -234,13 +234,13 @@
         </link>
       </model>
       <model name='first_2015_trash_can'>
-        <pose>0.9645 -2.8209 -6e-06 -1.2e-05 6e-06 -0.008577</pose>
+        <pose>0.96461 -2.82095 -4e-06 -1e-06 1.9e-05 -0.009306</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose>0.9645 -2.8209 -6e-06 -1.2e-05 6e-06 -0.008577</pose>
+          <pose>0.96461 -2.82095 -4e-06 -1e-06 1.9e-05 -0.009306</pose>
           <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>-0.413814 0.678493 -7.95248 -1.62118 -1.04283 0.044252</acceleration>
-          <wrench>-1.99903 3.27764 -38.4165 0 -0 0</wrench>
+          <acceleration>1.82159 -0.278398 -5.44886 0.755906 -1.3372 3.4e-05</acceleration>
+          <wrench>8.79968 -1.34487 -26.3221 0 -0 0</wrench>
         </link>
       </model>
       <model name='ground_plane'>
@@ -289,7 +289,7 @@
     </state>
     <gui fullscreen='0'>
       <camera name='user_camera'>
-        <pose>4.69706 0.459814 15.6407 0 1.3138 3.11388</pose>
+        <pose>5.29523 -0.190602 12.2555 0 1.2858 2.55869</pose>
         <view_controller>orbit</view_controller>
         <projection_type>perspective</projection_type>
       </camera>
@@ -1940,7 +1940,7 @@
       <allow_auto_disable>1</allow_auto_disable>
       <pose>0.519324 8.70561 0 0 -0 0</pose>
     </model>
-    <model name='RedBox'>
+    <model name='RedBox2'>
       <link name='link_0'>
         <inertial>
           <mass>1</mass>
@@ -1963,7 +1963,7 @@
           <pose>0 0 0 0 -0 0</pose>
           <geometry>
             <box>
-              <size>0.1 0.1 0.3</size>
+              <size>0.1 0.1 0.1</size>
             </box>
           </geometry>
           <material>
@@ -1989,7 +1989,7 @@
           <pose>0 0 0 0 -0 0</pose>
           <geometry>
             <box>
-              <size>0.1 0.1 0.3</size>
+              <size>0.1 0.1 0.1</size>
             </box>
           </geometry>
           <surface>
@@ -2041,7 +2041,7 @@
       </link>
       <static>0</static>
       <allow_auto_disable>1</allow_auto_disable>
-      <pose>4.52767 1.52494 0 0 -0 0</pose>
+      <pose>-3.57494 3.29995 0 0 -0 0</pose>
     </model>
   </world>
 </sdf>

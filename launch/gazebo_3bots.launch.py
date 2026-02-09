@@ -25,7 +25,7 @@ def generate_launch_description():
     )
     
     jetbots = []
-    for i, (name, y, slam_enable) in enumerate([("jetbot_1", "0.0", "true"), ("jetbot_2", "1.0", "false"), ("jetbot_3", "-1.0", "false")]):
+    for i, (name, y, slam_enable) in enumerate([("jetbot_1", "0.0", "true"), ("jetbot_2", "1.0", "true"), ("jetbot_3", "-1.0", "true")]):
         jetbot = IncludeLaunchDescription(
             PythonLaunchDescriptionSource([
                 os.path.join(get_package_share_directory('my_package'), 'launch', 'jetbot_sim.launch.py')
