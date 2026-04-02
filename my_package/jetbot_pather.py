@@ -9,6 +9,7 @@ import sys
 class PathLogger(Node):
     def __init__(self):
         super().__init__('path_logger')
+        
         self.subscription = self.create_subscription(
             Odometry,
             f'{self.get_namespace()}/odom',

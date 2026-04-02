@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from example_interfaces.msg import String
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, LaserScan
 from cv_bridge import CvBridge
 from nav_msgs.msg import Odometry, OccupancyGrid, MapMetaData
 from geometry_msgs.msg import Pose, Point
@@ -42,33 +42,35 @@ class Head(Node):
             '/grid',
             map_qos
         )
+
         self.robot_position_sub = self.create_subscription(
             String,
             '/robot_position',
             self.grid_update_robot_position,
             10
         )
-        self.laser_data_sub = self.create_subscription(
+
+        self.map_sub = self.create_subscription(
             String,
-            '/jetbot/scan',
-            self.grid_update_obstacles_positions,
+            '/map',
+            self.map_callback,
             10
         )
-        self.command_sub = self.create_subscription(
-            String,
-            '/head/command',
-            self.command_callback,
-            10
+
+        self.coverage_grid_pub = self.create_publisher(
+            OccupancyGrid,
+            '/coverage_grid',
+            map_qos
         )
 
 
         self.declare_parameter('map_width', 10.0)
         self.declare_parameter('map_height', 10.0)
 
-        map_width = self.get_parameter('map_width').get_parameter_value().double_value
-        map_height = self.get_parameter('map_height').get_parameter_value().double_value
+        self.map_width = self.get_parameter('map_width').get_parameter_value().double_value
+        self.map_height = self.get_parameter('map_height').get_parameter_value().double_value
 
-        self.grid_create(map_width, map_height)
+        self.grid_create(self.map_width, self.map_height)
         
         self.bridge = CvBridge()
 
@@ -133,25 +135,7 @@ class Head(Node):
                 1
             )
     
-    def command_callback(self, msg):
-        cmd = msg.data.lower()
-
-        command = cmd[0].lower()
-        args = cmd[1] 
-
-        if command.lower() == "start":
-            self.command_start()
-                
-        elif command.lower() == "stop":
-            self.command_stop()
-
-        elif command.lower() == "hop":
-            if args:
-                self.command_take_direction(int(args))
-            else:
-                print("Error: 'hop' requires a value.")
-
-    def keyboard_input(self):               # works only on terminal where head.py is runed not by launch file 
+    def keyboard_input(self):
         while True:
             user_input = input().strip().split()
             
@@ -170,7 +154,6 @@ class Head(Node):
                 else:
                     print("Error: 'hop' requires a value.")
     
-
     def save_image_once(self, msg):
         if self.image_saved:
             return
@@ -210,30 +193,7 @@ class Head(Node):
             self.grid.data[index] = 1
             
             self.grid.header.stamp = self.get_clock().now().to_msg()
-            self.grid_pub.publish(self.grid)      
-
-    def grid_update_obstacles_positions(self, msg):
-
-        ranges = np.array(msg.ranges)
-
-        # x, y = (float(robot_position_x), float(robot_position_y))
-
-        # resolution = self.grid.info.resolution
-        # origin_x = self.grid.info.origin.position.x
-        # origin_y = self.grid.info.origin.position.y
-
-        # grid_x = int((x - origin_x) / resolution)
-        # grid_y = int((y - origin_y) / resolution)
-
-        # self.robots_positions[self.robot_name] = (grid_x, grid_y)
-
-        # if 0 <= grid_x < self.grid.info.width and 0 <= grid_y < self.grid.info.height:
-        #     index = grid_y * self.grid.info.width + grid_x
-            
-        #     self.grid.data[index] = 1
-            
-        #     self.grid.header.stamp = self.get_clock().now().to_msg()
-        #     self.grid_pub.publish(self.grid)    
+            self.grid_pub.publish(self.grid)        
 
     def grid_create(self, width, height):
         if width > 0.0 and height > 0.0:
@@ -245,16 +205,6 @@ class Head(Node):
             self.grid.info.height = int(height / resolution)
             self.grid.info.resolution = resolution
             self.grid.header.frame_id = "grid"
-
-            t = TransformStamped()
-            t.header.stamp = self.get_clock().now().to_msg()
-            t.header.frame_id = 'mapmap' # Parent
-            t.child_frame_id = 'grid'    # Child 
-            t.transform.translation.x = 0.0
-            t.transform.translation.y = 0.0
-            t.transform.translation.z = 0.0
-            
-            self.tf_static_broadcaster.sendTransform(t)
 
             self.grid.info.origin = Pose()
             self.grid.info.origin.position.x = - width / 2.0
@@ -285,7 +235,7 @@ class Head(Node):
 
         plt.figure(figsize=(10, 10)) 
         plt.imshow(display_grid, cmap='gray', origin='lower', vmin=0.0, vmax=1.0)
-        plt.title("Occupancy Grid")
+        plt.title("Coverage Grid")
         plt.xlabel("X (cells)")
         plt.ylabel("Y (cells)")
         plt.grid(False)
@@ -300,18 +250,29 @@ class Head(Node):
 
         p.tick_params(which='minor', bottom=False, left=False)
 
-        filename="occupancy_grid.png"
+        filename="coverage_grid.png"
         plt.savefig(filename)
         plt.close()
-        print(f"Occupancy grid saved as: {filename}")
+        print(f"Coverage grid saved as: {filename}")
+
+    def map_callback(self, msg):
+        self.coverage_grid = list(msg.data)
+        self.map_info = msg.info
+
+        self.destroy_subscription(self.map_sub)
+        self.map_sub = None
+
+
 
 
 def main(args=None):
     rclpy.init(args=args)
-    head = Head() 
-    rclpy.spin(head)
-    head.destroy_node()
-    rclpy.shutdown()
+    node = Head() 
+    try:
+        rclpy.spin(node)
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
