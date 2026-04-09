@@ -51,16 +51,25 @@ class Mapper(Node):
 
         self.get_logger().info('Mapper started')
 
+    def create_new_map_folder(self, base_dir):
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+        new_dir = os.path.join(base_dir, timestamp)
+        os.makedirs(new_dir, exist_ok=True)
+        return new_dir
+
     def save_map(self):
         if not self.save_map_client.wait_for_service(timeout_sec=10.0):
             self.get_logger().error('Service slam_toolbox/save_map is not available')
             return
 
         request = SaveMap.Request()
-        request.name.data = f'{self.maps_dir}{self.get_namespace()}_map'
+
+        self.folder_path = self.create_new_map_folder(self.maps_dir)
+
+        request.name.data = f'{self.folder_path}{self.get_namespace()}_map'
 
         self.get_logger().info(f'Saving map to: {request.name.data}')
-
+        
         future = self.save_map_client.call_async(request)
 
         self.map_saved = True
@@ -90,8 +99,8 @@ class Mapper(Node):
 
         map_name = f'{self.get_namespace()}_rescaled_map'
 
-        self.write_pgm(new_map, f'{self.maps_dir}{map_name}.pgm')
-        self.write_yaml(new_map, f'{self.maps_dir}{map_name}.yaml', map_name)
+        self.write_pgm(new_map, f'{self.folder_path}{map_name}.pgm')
+        self.write_yaml(new_map, f'{self.folder_path}{map_name}.yaml', map_name)
 
         self.map_saved = False
 
@@ -160,17 +169,17 @@ class Mapper(Node):
 
         pixels = bytearray()
 
-        for y in range(height):
+        for y in range(height - 1, -1, -1):
             for x in range(width):
                 v = data[y * width + x]
 
                 if v >= 50 or v == -1:
                     pixels.append(0)
                 else:
-                    pixels.append(254)
+                    pixels.append(255)
 
         with open(pgm_path, 'wb') as f:
-            header = f'P5\n# CREATOR: coarse_map_publisher\n{width} {height}\n255\n'
+            header = f'P5\n# CREATOR: coarse_map\n{width} {height}\n255\n'
             f.write(header.encode('ascii'))
             f.write(pixels)
         self.get_logger().info("write_pgm")

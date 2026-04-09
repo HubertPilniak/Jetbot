@@ -36,7 +36,8 @@ setup(
             'jetbot_pather = my_package.jetbot_pather:main',
             'head = my_package.head:main',
             'jetbot_mapper = my_package.jetbot_mapper:main',
-            'frontier_explorer = my_package.frontier_explorer:main'
+            'point_generator = my_package.point_generator:main',
+            'point_allocator = my_package.point_allocator:main'
         ],
     },
 )

@@ -1,13 +1,14 @@
 import os
 
 from launch import LaunchDescription
-from launch_ros.actions import Node
-from launch.actions import DeclareLaunchArgument, OpaqueFunction, TimerAction, IncludeLaunchDescription
+from launch_ros.actions import Node, PushRosNamespace, SetRemap
+from launch.actions import DeclareLaunchArgument, OpaqueFunction, TimerAction, IncludeLaunchDescription, GroupAction
 from launch.substitutions import LaunchConfiguration, Command
 from ament_index_python.packages import get_package_share_directory
 from launch_ros.parameter_descriptions import ParameterValue
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from nav2_common.launch import ReplaceString
 
 import xacro
 
@@ -31,7 +32,6 @@ def generate_launch_description():
     
     use_sim_time = LaunchConfiguration('use_sim_time')
     robot_name = LaunchConfiguration('robot_name')    
-    search_type = LaunchConfiguration('search_type')
     x= LaunchConfiguration('x')
     y= LaunchConfiguration('y')
     maps_dir = LaunchConfiguration('maps_dir')
@@ -119,16 +119,33 @@ def generate_launch_description():
         }]
     )
 
-    navigation = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory('nav2_bringup'), 'launch', 'navigation_launch.py')
-        ),
-        launch_arguments={
-            'namespace': robot_name,
-            'use_sim_time': use_sim_time,
-            'params_file': os.path.join(get_package_share_directory('my_package'), 'config', 'navigation.yaml'),
-        }.items(),
+    namespaced_params = ReplaceString(
+        source_file=os.path.join(
+            get_package_share_directory('my_package'), 'config', 'navigation.yaml'),
+        replacements={
+            '<robot_namespace>': robot_name
+        }
     )
+
+    navigation = GroupAction([
+        PushRosNamespace(robot_name),
+        SetRemap(src='/tf', dst='/tf'),
+        SetRemap(src='tf', dst='/tf'),
+        SetRemap(src='/tf_static', dst='/tf_static'),
+        SetRemap(src='tf_static', dst='/tf_static'),
+
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(
+                    get_package_share_directory('nav2_bringup'), 'launch', 'navigation_launch.py')
+            ),
+            launch_arguments={
+                'namespace': robot_name,
+                'use_sim_time': use_sim_time,
+                'params_file': namespaced_params,
+            }.items(),
+        )
+    ])
 
     explore = Node(
         package='explore_lite',
@@ -139,8 +156,8 @@ def generate_launch_description():
         parameters=[{
             'use_sim_time': use_sim_time,
             'robot_base_frame': [robot_name, '/base_link'],
-            'costmap_topic': '/map',
-            'costmap_updates_topic': '/map_updates',
+            'costmap_topic': 'global_costmap/costmap',
+            'costmap_updates_topic': 'global_costmap/costmap_updates',
             'visualize': True,
             'planner_frequency': 0.5,
             'progress_timeout': 30.0,
@@ -160,10 +177,9 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('use_sim_time', default_value='true', description='Use sim time if true'),
         DeclareLaunchArgument('robot_name', default_value='jetbot'),
-        DeclareLaunchArgument('search_type', default_value='random'),
         DeclareLaunchArgument('x', default_value='0.0'),
         DeclareLaunchArgument('y', default_value='0.0'),
-        DeclareLaunchArgument('maps_dir', default_value='~/maps', description='Directory to save map'),
+        DeclareLaunchArgument('maps_dir', default_value='~/maps'),
 
         # OpaqueFunction(function=update_yaml),
         robot_state_publisher,
@@ -172,6 +188,6 @@ def generate_launch_description():
         pather,
         slam,
         map_manager,
-        #navigation,
-        #explore
+        navigation,
+        TimerAction(period=5.0, actions=[explore])
     ])

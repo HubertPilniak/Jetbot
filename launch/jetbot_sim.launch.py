@@ -34,8 +34,6 @@ def generate_launch_description():
     search_type = LaunchConfiguration('search_type')
     x= LaunchConfiguration('x')
     y= LaunchConfiguration('y')
-    maps_dir = LaunchConfiguration('maps_dir')
-    map_file_name = LaunchConfiguration('map_file_name')
 
     pkg_path = os.path.join(get_package_share_directory('my_package'))
     xacro_file = os.path.join(pkg_path,'models', 'Jetbot_v1', 'model.urdf.xacro')
@@ -96,11 +94,11 @@ def generate_launch_description():
         namespace=robot_name
     )
 
-    search = Node(
-        package='my_package',
-        executable=['jetbot_search_', search_type],
-        namespace=robot_name
-    )
+    # search = Node(
+    #     package='my_package',
+    #     executable=['jetbot_search_', search_type],
+    #     namespace=robot_name
+    # )
 
     pather = Node(
         package='my_package',
@@ -185,8 +183,6 @@ def generate_launch_description():
         DeclareLaunchArgument('search_type', default_value='random'),
         DeclareLaunchArgument('x', default_value='0.0'),
         DeclareLaunchArgument('y', default_value='0.0'),
-        DeclareLaunchArgument('maps_dir', default_value='~/maps', description='Directory to maps folder'),
-        DeclareLaunchArgument('map_file_name', default_value='jetbot_map', description='Name of map file'),
 
         # OpaqueFunction(function=update_yaml),
         robot_state_publisher,
@@ -195,7 +191,7 @@ def generate_launch_description():
         # diff_drive_spawner,
         # joint_broad_spawner,
         detector,
-        search,
+        #search,
         pather,
         amcl_node,
         TimerAction(period=2.0, actions=[lifecycle_manager_for_amcl]),
