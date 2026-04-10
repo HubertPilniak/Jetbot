@@ -1,104 +1,83 @@
-from collections import deque
 from pathlib import Path
-import re
-import yaml
-
+import os
+import cv2
 import numpy as np
 import rclpy
+import yaml
 from geometry_msgs.msg import PoseWithCovarianceStamped
 from PIL import Image
 from rclpy.node import Node
+from nav_msgs.msg import Odometry
+import re
+from collections import deque
+from ortools.constraint_solver import pywrapcp
+from ortools.constraint_solver import routing_enums_pb2
 
 
 class PointAllocator(Node):
     def __init__(self):
         super().__init__("point_allocator")
 
-        self.declare_parameter("map_yaml_path", "")
-        self.declare_parameter("points_txt_path", "")
-        self.declare_parameter("robot_namespaces", [])
-        self.declare_parameter("pose_topic_suffix", "/amcl_pose")
-        self.declare_parameter("free_threshold_override", -1.0)
-        self.declare_parameter("scale", 100)
-        self.declare_parameter("return_to_start", False)
-        self.declare_parameter("build_once_when_ready", True)
+        self.declare_parameter("files_path", "~/maps")
 
-        self.map_yaml_path = self.get_parameter("map_yaml_path").value
-        self.points_txt_path = self.get_parameter("points_txt_path").value
-        self.robot_namespaces = list(self.get_parameter("robot_namespaces").value)
-        self.pose_topic_suffix = self.get_parameter("pose_topic_suffix").value
-        self.free_threshold_override = float(self.get_parameter("free_threshold_override").value)
-        self.scale = int(self.get_parameter("scale").value)
-        self.return_to_start = bool(self.get_parameter("return_to_start").value)
-        self.build_once_when_ready = bool(self.get_parameter("build_once_when_ready").value)
-
-        if not self.map_yaml_path:
-            raise ValueError("Parametr 'map_yaml_path' jest wymagany")
-        if not self.points_txt_path:
-            raise ValueError("Parametr 'points_txt_path' jest wymagany")
-        if not self.robot_namespaces:
-            raise ValueError("Parametr 'robot_namespaces' nie może być pusty")
-
-        self.map_info = self._load_map(self.map_yaml_path)
-        self.points_image = self._load_points_from_file(self.points_txt_path)
-        self.points_image = [self._snap_to_nearest_free(p) for p in self.points_image]
-
+        self.files_path = os.path.expanduser(self.get_parameter("files_path").value)
+        self.robot_namespaces = ["jetbot_0", "jetbot_1", "jetbot_2"]
+        
         self.robot_world_positions = {}
         self.robot_image_positions = {}
-        self.subscriptions = []
-        self.data_model = None
-        self.built = False
+
+        self.scale = 10
+
+        self.timer_period = 5.0
+
+        self.ready_timer = self.create_timer(self.timer_period, self.check_if_ready)
+
+        self.pose_subscriptions = []
 
         for ns in self.robot_namespaces:
-            topic = f"{ns.rstrip('/')}{self.pose_topic_suffix}"
+            topic = f"{ns}/amcl_pose"
             sub = self.create_subscription(
                 PoseWithCovarianceStamped,
                 topic,
-                lambda msg, robot_ns=ns: self._robot_pose_callback(robot_ns, msg),
+                lambda msg, robot_ns=ns: self.robot_pose_callback(robot_ns, msg),
                 10,
             )
-            self.subscriptions.append(sub)
-            self.get_logger().info(f"Subskrybuję pozycję robota z topicu: {topic}")
+            self.pose_subscriptions.append(sub)
+            self.get_logger().info(f"Subscribing robot amcl topic: {topic}")
 
-        self.timer = self.create_timer(1.0, self._try_build_once)
+        self.get_logger().info(f"Files path: {self.files_path}")
+
+        self.map_info = self.load_map()
 
         self.get_logger().info(
-            f"Wczytano mapę: {self.map_info['width']}x{self.map_info['height']}, "
+            f"Map loaded: {self.map_info['width']}x{self.map_info['height']}, "
             f"resolution={self.map_info['resolution']}"
         )
-        self.get_logger().info(f"Wczytano {len(self.points_image)} punktów z pliku")
 
-    def _load_map(self, map_yaml_path: str):
-        map_yaml_path = Path(map_yaml_path).resolve()
-        with open(map_yaml_path, "r", encoding="utf-8") as f:
+        self.point_cells = (self.load_points_from_file(self.files_path + "/observation_points.txt"))
+
+    def load_map(self):
+        yaml_path = os.path.join(self.files_path, "jetbot_rescaled_map.yaml")
+        with open(yaml_path, "r", encoding="utf-8") as f:
             meta = yaml.safe_load(f)
 
-        image_path = Path(meta["image"])
-        if not image_path.is_absolute():
-            image_path = map_yaml_path.parent / image_path
+        image_name = Path(meta["image"].lstrip("/"))
+        image_path = os.path.join(self.files_path, image_name)
 
-        image = Image.open(image_path).convert("L")
-        gray = np.array(image, dtype=np.uint8)
+        self.image = Image.open(image_path).convert("L")
+        gray = np.array(self.image, dtype=np.uint8)
 
         resolution = float(meta["resolution"])
         origin = meta["origin"]
         origin_x = float(origin[0])
         origin_y = float(origin[1])
 
-        negate = int(meta.get("negate", 0))
         occupied_thresh = float(meta.get("occupied_thresh", 0.65))
-        free_thresh = float(meta.get("free_thresh", 0.196))
+        free_thresh = float(meta.get("free_thresh", 0.25))
 
-        # Przeliczenie jak w map_server: piksel -> occupancy probability
-        if negate == 0:
-            occ = (255.0 - gray.astype(np.float32)) / 255.0
-        else:
-            occ = gray.astype(np.float32) / 255.0
+        occ = (255.0 - gray.astype(np.float32)) / 255.0
 
-        if self.free_threshold_override >= 0.0:
-            free_mask = occ < self.free_threshold_override
-        else:
-            free_mask = occ < free_thresh
+        free_mask = occ < free_thresh
 
         return {
             "gray": gray,
@@ -107,12 +86,10 @@ class PointAllocator(Node):
             "origin_x": origin_x,
             "origin_y": origin_y,
             "width": gray.shape[1],
-            "height": gray.shape[0],
-            "occupied_thresh": occupied_thresh,
-            "free_thresh": free_thresh,
+            "height": gray.shape[0]
         }
 
-    def _load_points_from_file(self, points_txt_path: str):
+    def load_points_from_file(self, points_txt_path: str):
         point_pattern = re.compile(r"point=\((\d+),\s*(\d+)\)")
         points = []
 
@@ -128,20 +105,22 @@ class PointAllocator(Node):
                     y = int(match.group(2))
                     points.append((x, y))
 
-        return points
+        return points    
 
-    def _robot_pose_callback(self, robot_ns: str, msg: PoseWithCovarianceStamped):
+    def robot_pose_callback(self, robot_ns: str, msg: PoseWithCovarianceStamped):
         wx = msg.pose.pose.position.x
         wy = msg.pose.pose.position.y
 
         self.robot_world_positions[robot_ns] = (wx, wy)
 
-        image_cell = self._world_to_image_cell(wx, wy)
-        snapped = self._snap_to_nearest_free(image_cell)
+        image_cell = self.world_to_image_cell(wx, wy)
+        self.robot_image_positions[robot_ns] = image_cell
 
-        self.robot_image_positions[robot_ns] = snapped
+        self.get_logger().info(
+            f"{robot_ns}: world=({wx:.2f}, {wy:.2f}) -> image={image_cell}"
+        )
 
-    def _world_to_image_cell(self, wx: float, wy: float):
+    def world_to_image_cell(self, wx: float, wy: float):
         resolution = self.map_info["resolution"]
         origin_x = self.map_info["origin_x"]
         origin_y = self.map_info["origin_y"]
@@ -150,61 +129,65 @@ class PointAllocator(Node):
         map_x = int((wx - origin_x) / resolution)
         map_y = int((wy - origin_y) / resolution)
 
-        # zamiana z układu mapy ROS (0,0 na dole) na układ obrazu (0,0 u góry)
         image_y = height - 1 - map_y
         return (map_x, image_y)
 
-    def _in_bounds(self, x: int, y: int):
+    def in_bounds(self, x: int, y: int):
         return 0 <= x < self.map_info["width"] and 0 <= y < self.map_info["height"]
 
-    def _is_free(self, x: int, y: int):
-        return self._in_bounds(x, y) and bool(self.map_info["free_mask"][y, x])
+    def is_free(self, x: int, y: int):
+        return self.in_bounds(x, y) and bool(self.map_info["free_mask"][y, x])
 
-    def _snap_to_nearest_free(self, cell, max_radius: int = 20):
-        cx, cy = cell
+    def check_if_ready(self):
+        if len(self.robot_image_positions) != len(self.robot_namespaces):
+            missing = [ns for ns in self.robot_namespaces if ns not in self.robot_image_positions]
+            self.get_logger().info(f"Waiting for robot poses: {missing}")
+            return
 
-        if self._is_free(cx, cy):
-            return (cx, cy)
+        self.get_logger().info("All robot positions received")
+        self.get_logger().info(f"Robot image positions: {self.robot_image_positions}")
 
-        visited = set()
-        q = deque()
-        q.append((cx, cy, 0))
-        visited.add((cx, cy))
+        self.get_logger().info("All required data received. Building cost matrix...")
+        data = self.build_ortools_data_model()
+        
+        matrix_range = 10
+        self.get_logger().info(f"Showing {matrix_range} first rows and colums")
+        for i, row in enumerate(data["distance_matrix"][:matrix_range]):
+            self.get_logger().info(f"row {i}: {row[:matrix_range]}")
+        self.get_logger().info(".....")
 
-        neighbors = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+        result = self.solve_paths_with_ortools_balanced_cost(data)
 
-        while q:
-            x, y, dist = q.popleft()
+        for route in result["routes"]:
+            self.get_logger().info(
+                f"Robot {route['vehicle_id']} | cost={route['cost']} | nodes={route['nodes']}"
+            )
 
-            if dist > max_radius:
-                break
+        self.get_logger().info(f"Total cost: {result['total_cost']}")
 
-            if self._is_free(x, y):
-                return (x, y)
+        self.get_logger().info("Saving map with assigmented points")
+        self.save_assignment_image(result)
 
-            for dx, dy in neighbors:
-                nx = x + dx
-                ny = y + dy
-                if (nx, ny) in visited:
-                    continue
-                if not self._in_bounds(nx, ny):
-                    continue
-                visited.add((nx, ny))
-                q.append((nx, ny, dist + 1))
+        self.ready_timer.cancel()
 
-        raise ValueError(f"Nie udało się znaleźć wolnej komórki w pobliżu {cell}")
+        world_paths = self.convert_routes_to_world_paths(result)
 
-    def _bfs_distances_from_source(self, source, targets=None):
-        """
-        BFS na gridzie 4-kierunkowym.
-        Zwraca słownik: {(x, y): dystans_w_komórkach}
-        """
-        if not self._is_free(source[0], source[1]):
+
+        self.get_logger().info("Converted points to world coordinates:")
+
+        for route in world_paths:
+            self.get_logger().info(f"Robot {route['vehicle_id']}:")
+            for i, (wx, wy) in enumerate(route["world_points"]):
+                self.get_logger().info(f"  point {i}: x={wx:.3f}, y={wy:.3f}")
+
+    def bfs_distances_from_source(self, source, targets=None):
+
+        if not self.is_free(source[0], source[1]):
             return {}
 
-        q = deque([source])
+        queue = deque([source])
         visited = {source}
-        dist = {source: 0}
+        distances = {source: 0}
 
         targets_left = None
         if targets is not None:
@@ -214,8 +197,8 @@ class PointAllocator(Node):
 
         neighbors = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 
-        while q:
-            x, y = q.popleft()
+        while queue:
+            x, y = queue.popleft()
 
             if targets_left is not None and not targets_left:
                 break
@@ -223,69 +206,78 @@ class PointAllocator(Node):
             for dx, dy in neighbors:
                 nx = x + dx
                 ny = y + dy
-                nxt = (nx, ny)
+                next_cell = (nx, ny)
 
-                if nxt in visited:
-                    continue
-                if not self._is_free(nx, ny):
+                if next_cell in visited:
                     continue
 
-                visited.add(nxt)
-                dist[nxt] = dist[(x, y)] + 1
-                q.append(nxt)
+                if not self.is_free(nx, ny):
+                    continue
 
-                if targets_left is not None and nxt in targets_left:
-                    targets_left.remove(nxt)
+                visited.add(next_cell)
+                distances[next_cell] = distances[(x, y)] + 1
+                queue.append(next_cell)
 
-        return dist
+                if targets_left is not None and next_cell in targets_left:
+                    targets_left.remove(next_cell)
+
+        return distances
 
     def build_cost_matrix(self):
-        """
-        Tworzy pełną macierz kosztów:
-        - najpierw roboty
-        - potem punkty obserwacyjne
-
-        Koszt liczony BFS-em po wolnych komórkach mapy.
-        Wynik końcowy w integerach, przeskalowany do OR-Tools.
-        """
-        if len(self.robot_image_positions) != len(self.robot_namespaces):
-            raise RuntimeError("Nie ma jeszcze pozycji wszystkich robotów")
 
         robot_cells = [self.robot_image_positions[ns] for ns in self.robot_namespaces]
-        point_cells = list(self.points_image)
+        point_cells = self.point_cells
 
         real_nodes = robot_cells + point_cells
         real_count = len(real_nodes)
+        num_robots = len(robot_cells)
 
-        distance_matrix = [[0 for _ in range(real_count)] for _ in range(real_count)]
+        distance_matrix = [[None for _ in range(real_count)] for _ in range(real_count)]
         unreachable_cost = 10**9
 
-        target_set = set(real_nodes)
+        for i in range(real_count):
+            distance_matrix[i][i] = 0
 
         for i, src in enumerate(real_nodes):
-            dist_map = self._bfs_distances_from_source(src, targets=target_set)
+            targets = set(real_nodes[j] for j in range(i + 1, real_count))
+            if not targets:
+                continue
 
-            for j, dst in enumerate(real_nodes):
-                if i == j:
-                    distance_matrix[i][j] = 0
-                    continue
+            dist_map = self.bfs_distances_from_source(src, targets=targets)
+
+            for j in range(i + 1, real_count):
+                dst = real_nodes[j]
 
                 path_len_cells = dist_map.get(dst)
                 if path_len_cells is None:
-                    distance_matrix[i][j] = unreachable_cost
+                    value = None
                 else:
                     path_len_m = path_len_cells * self.map_info["resolution"]
-                    distance_matrix[i][j] = int(round(path_len_m * self.scale))
+                    value = int(round(path_len_m * self.scale))
+                    
+
+                distance_matrix[i][j] = value
+                distance_matrix[j][i] = value
+
+        for i in range(num_robots):
+            for j in range(i + 1, num_robots):
+                distance_matrix[i][j] = None
+                distance_matrix[j][i] = None
+
+        for i in range(real_count):
+            for j in range(real_count):
+                if distance_matrix[i][j] is None:
+                    distance_matrix[i][j] = unreachable_cost
 
         return distance_matrix, robot_cells, point_cells
 
-    def build_ortools_data_model(self):
+    def build_ortools_data_model(self, return_to_start=True):
         distance_matrix, robot_cells, point_cells = self.build_cost_matrix()
 
         num_robots = len(robot_cells)
         starts = list(range(num_robots))
 
-        if self.return_to_start:
+        if return_to_start:
             ends = list(range(num_robots))
             locations = robot_cells + point_cells
             return {
@@ -298,7 +290,6 @@ class PointAllocator(Node):
                 "num_vehicles": num_robots,
             }
 
-        # Trasy otwarte: dodajemy dummy end nodes
         real_count = len(distance_matrix)
         total_count = real_count + num_robots
         unreachable_cost = 10**9
@@ -311,13 +302,11 @@ class PointAllocator(Node):
 
         dummy_start = real_count
 
-        # z każdego prawdziwego węzła można skończyć trasę w dowolnym dummy end z kosztem 0
         for i in range(real_count):
             for r in range(num_robots):
                 end_idx = dummy_start + r
                 extended[i][end_idx] = 0
 
-        # dummy end nigdzie dalej nie prowadzą
         for r in range(num_robots):
             end_idx = dummy_start + r
             extended[end_idx][end_idx] = 0
@@ -335,29 +324,194 @@ class PointAllocator(Node):
             "num_vehicles": num_robots,
         }
 
-    def _try_build_once(self):
-        if self.built:
-            return
-        if not self.build_once_when_ready:
-            return
-        if len(self.robot_image_positions) != len(self.robot_namespaces):
-            missing = [ns for ns in self.robot_namespaces if ns not in self.robot_image_positions]
-            self.get_logger().info(f"Czekam na pozycje robotów: {missing}")
-            return
+    def solve_paths_with_ortools_balanced_cost(self, data):
 
-        self.data_model = self.build_ortools_data_model()
-        self.built = True
+        num_vehicles = data["num_vehicles"]
+        num_robots = len(data["robot_cells"])
+        num_points = len(data["point_cells"])
 
-        self.get_logger().info("Macierz kosztów została zbudowana.")
-        self.get_logger().info(
-            f"Liczba robotów: {self.data_model['num_vehicles']}, "
-            f"liczba punktów: {len(self.data_model['point_cells'])}, "
-            f"rozmiar macierzy: {len(self.data_model['distance_matrix'])} x {len(self.data_model['distance_matrix'][0])}"
+        first_point_node = num_robots
+        last_point_node = num_robots + num_points - 1
+
+        manager = pywrapcp.RoutingIndexManager(
+            len(data["distance_matrix"]),
+            num_vehicles,
+            data["starts"],
+            data["ends"]
         )
 
-        for i, row in enumerate(self.data_model["distance_matrix"][:5]):
-            self.get_logger().info(f"row {i}: {row[:10]}")
+        routing = pywrapcp.RoutingModel(manager)
 
+        def distance_callback(from_index, to_index):
+            from_node = manager.IndexToNode(from_index)
+            to_node = manager.IndexToNode(to_index)
+            return data["distance_matrix"][from_node][to_node]
+
+        transit_callback_index = routing.RegisterTransitCallback(distance_callback)
+        routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
+
+
+        for node in range(first_point_node, last_point_node + 1):
+            routing.AddDisjunction([manager.NodeToIndex(node)], 10**9)
+
+
+        routing.AddDimension(
+            transit_callback_index,
+            0,          
+            10**9,    
+            True,       
+            "Distance"
+        )
+
+        distance_dimension = routing.GetDimensionOrDie("Distance")
+
+        distance_dimension.SetGlobalSpanCostCoefficient(100)
+
+        approx_total = 0
+        count = 0
+        matrix = data["distance_matrix"]
+
+        for i in range(num_robots):
+            for j in range(first_point_node, last_point_node + 1):
+                if matrix[i][j] < 10**9:
+                    approx_total += matrix[i][j]
+                    count += 1
+
+        if count > 0:
+            avg_start_cost = approx_total // count
+            soft_limit = avg_start_cost * max(1, num_points // num_vehicles + 1) * 2
+
+            for vehicle_id in range(num_vehicles):
+                end_index = routing.End(vehicle_id)
+                distance_dimension.SetCumulVarSoftUpperBound(
+                    end_index,
+                    soft_limit,
+                    100
+                )
+
+        search_parameters = pywrapcp.DefaultRoutingSearchParameters()
+        search_parameters.first_solution_strategy = routing_enums_pb2.FirstSolutionStrategy.PARALLEL_CHEAPEST_INSERTION
+        search_parameters.local_search_metaheuristic = routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+        search_parameters.time_limit.seconds = 15
+
+        solution = routing.SolveWithParameters(search_parameters)
+
+        if solution is None:
+            self.get_logger().error("OR-Tools did not find a solution")
+            return None
+
+        routes = []
+        total_cost = 0
+
+        for vehicle_id in range(num_vehicles):
+            index = routing.Start(vehicle_id)
+
+            route_nodes = []
+            route_locations = []
+            route_point_nodes = []
+            route_point_indices = []
+            route_cost = 0
+
+            while not routing.IsEnd(index):
+                node = manager.IndexToNode(index)
+                route_nodes.append(node)
+                route_locations.append(data["locations"][node])
+
+                if first_point_node <= node <= last_point_node:
+                    route_point_nodes.append(node)
+                    route_point_indices.append(node - first_point_node)
+
+                next_index = solution.Value(routing.NextVar(index))
+                next_node = manager.IndexToNode(next_index)
+
+                route_cost += data["distance_matrix"][node][next_node]
+                index = next_index
+
+            end_node = manager.IndexToNode(index)
+            route_nodes.append(end_node)
+            route_locations.append(data["locations"][end_node])
+
+            end_cost = solution.Value(distance_dimension.CumulVar(routing.End(vehicle_id)))
+
+            routes.append({
+                "vehicle_id": vehicle_id,
+                "nodes": route_nodes,
+                "locations": route_locations,
+                "point_nodes": route_point_nodes,
+                "point_indices": route_point_indices,
+                "cost": route_cost,
+                "distance_dimension_cost": end_cost
+            })
+
+            total_cost += route_cost
+
+        return {
+            "routes": routes,
+            "total_cost": total_cost,
+            "data_model": data
+        }
+
+    def save_assignment_image(self, result):
+        img = np.array(self.image.convert("RGB"))
+
+        img[(img == [255, 255, 255]).all(axis=2)] = [180, 180, 180]
+
+        robot_cells = [self.robot_image_positions[ns] for ns in self.robot_namespaces]
+        point_cells = self.point_cells
+
+        real_nodes = robot_cells + point_cells
+
+        robot_colors = [
+            "green", 
+            "blue",    
+            "yellow"  
+        ]
+        robot_colors_rgb = [
+            (0, 255, 0), 
+            (0, 0, 255),    
+            (255, 255, 0)   
+        ]
+        for route in result["routes"]:
+            robot_id = route['vehicle_id']
+            self.get_logger().info(f'Robot {robot_id}: {robot_colors[robot_id]}')
+            for point in route['nodes']:
+                x, y = real_nodes[point]
+
+                img[y, x] = robot_colors_rgb[robot_id]
+
+        Image.fromarray(img).save(os.path.join(self.files_path, "jetbot_observation_points_colored.png"))
+
+    def convert_routes_to_world_paths(self, result):
+        world_paths = []
+
+        for route in result["routes"]:
+            vehicle_id = route["vehicle_id"]
+            world_points = []
+
+            for point_idx in route["point_indices"]:
+                cell_x, cell_y = self.point_cells[point_idx]
+                wx, wy = self.image_cell_to_world(cell_x, cell_y)
+                world_points.append((wx, wy))
+
+            world_paths.append({
+                "vehicle_id": vehicle_id,
+                "world_points": world_points
+            })
+
+        return world_paths
+
+    def image_cell_to_world(self, image_x: int, image_y: int):
+        resolution = self.map_info["resolution"]
+        origin_x = self.map_info["origin_x"]
+        origin_y = self.map_info["origin_y"]
+        height = self.map_info["height"]
+
+        map_y = height - 1 - image_y
+
+        wx = origin_x + (image_x + 0.5) * resolution
+        wy = origin_y + (map_y + 0.5) * resolution
+
+        return (wx, wy)
 
 def main(args=None):
     rclpy.init(args=args)
@@ -365,7 +519,6 @@ def main(args=None):
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
-
 
 if __name__ == "__main__":
     main()

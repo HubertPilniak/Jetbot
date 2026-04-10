@@ -113,6 +113,7 @@ def generate_launch_description():
         namespace=robot_name,
         output='screen',
         parameters=[{
+            'use_sime_time': True,
             'base_frame_id': [robot_name, '/base_link'],
             'odom_frame_id': [robot_name, '/odom'],
             'global_frame_id': 'map',
