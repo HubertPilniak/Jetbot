@@ -10,23 +10,6 @@ from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from nav2_common.launch import ReplaceString
 
-import xacro
-
-def modify_yaml_first_line(input_file, new_first_line):
-    with open(input_file, "r") as f:
-        lines = f.readlines()
-
-    lines[0] = new_first_line + ':\n'
-
-    with open(input_file, "w") as f:
-        f.writelines(lines)
-
-def update_yaml(context):
-    robot_name_value = LaunchConfiguration('robot_name').perform(context)  
-    controllers_file = os.path.join(get_package_share_directory('my_package'), 'config', 'controllers.yaml'
-    )
-    
-    modify_yaml_first_line(controllers_file, robot_name_value)
 
 def generate_launch_description():
     
@@ -35,6 +18,7 @@ def generate_launch_description():
     x= LaunchConfiguration('x')
     y= LaunchConfiguration('y')
     maps_dir = LaunchConfiguration('maps_dir')
+    spawn= LaunchConfiguration('spawn')
 
     pkg_path = os.path.join(get_package_share_directory('my_package'))
     xacro_file = os.path.join(pkg_path,'models', 'Jetbot_v1', 'model.urdf.xacro')
@@ -49,6 +33,7 @@ def generate_launch_description():
     )
 
     robot_state_publisher = Node(
+        condition=IfCondition(spawn),
         package='robot_state_publisher', executable='robot_state_publisher', 
         namespace=robot_name,
         parameters=[{'robot_description': robot_description, 'use_sim_time': use_sim_time}],
@@ -56,6 +41,7 @@ def generate_launch_description():
     )
     
     joint_state_publisher = Node(
+        condition=IfCondition(spawn),
         package='joint_state_publisher',
         executable='joint_state_publisher',
         parameters=[{'use_sim_time': use_sim_time}],
@@ -64,6 +50,7 @@ def generate_launch_description():
     )
 
     spawn_entity = Node(
+        condition=IfCondition(spawn),
         package='gazebo_ros', executable='spawn_entity.py',
         arguments=['-topic', ['/', robot_name, '/robot_description'],
                     '-entity', robot_name,
@@ -111,6 +98,7 @@ def generate_launch_description():
         namespace=robot_name,
         output='screen',
         parameters=[{
+            'use_sim_time': use_sim_time,
             'maps_dir': maps_dir,
             'image_format': 'pgm',
             'map_mode': 'trinary',
@@ -125,6 +113,7 @@ def generate_launch_description():
         DeclareLaunchArgument('x', default_value='0.0'),
         DeclareLaunchArgument('y', default_value='0.0'),
         DeclareLaunchArgument('maps_dir', default_value='~/maps'),
+        DeclareLaunchArgument('spawn', default_value='True', description='Spawn if true'),
 
         # OpaqueFunction(function=update_yaml),
         robot_state_publisher,

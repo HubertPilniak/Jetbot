@@ -32,14 +32,6 @@ def generate_launch_description():
         }]
     )
 
-    world_to_map_merge = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='world_to_map_merge_static_transform',
-        arguments=['0','0','0','0','0','0','world',''],
-        parameters=[{'use_sim_time': True}]
-    )
-
     return LaunchDescription([
         DeclareLaunchArgument('use_sim_time', default_value='true', description='Use sim time if true'),
         DeclareLaunchArgument('map_dir', default_value='maps'),

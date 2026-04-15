@@ -29,12 +29,6 @@ class Head(Node):
             '/robot_command',
             10
         )
-        self.blocked_sub = self.create_subscription(
-            String,
-            '/blocked',
-            self.blocked_callback,
-            10
-        )
         self.work_report_sub = self.create_subscription(
             String,
             '/work_report',
@@ -62,28 +56,6 @@ class Head(Node):
         self.get_logger().info(f"points: {points_count}, visited: {visited_count}, failed: {failed_count}")
         self.check_time()
         self.get_logger().info("--------------")
-
-    def blocked_callback(self, msg):
-            
-        if self.blocked_robot == None:
-
-            self.blocked_robot = msg.data
-            msg = String()
-            msg.data = "Stop"
-            self.robot_command_pub.publish(msg)
-            self.get_logger().info(f"Sent Stop, robot {self.blocked_robot} blocked!")
-            
-            msg = String()
-            msg.data = self.blocked_robot
-            self.robot_command_pub.publish(msg)
-            return
-
-        if self.blocked_robot == msg.data:
-            msg = String()
-            msg.data = "Start"
-            self.robot_command_pub.publish(msg)
-            self.get_logger().info(f"Sent Start, robot {self.blocked_robot} unblocked!")
-            self.blocked_robot = None
 
     def command_stop(self):
         msg = String()

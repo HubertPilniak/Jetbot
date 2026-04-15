@@ -40,7 +40,7 @@ class ColorDetect(Node):
         upper_red = np.array([5, 255, 255])
         mask = cv2.inRange(hsv, lower_red, upper_red)
 
-        if np.count_nonzero(mask) > 100:  
+        if np.count_nonzero(mask) > 600:  
             self.send_message()
         
     def send_message(self):

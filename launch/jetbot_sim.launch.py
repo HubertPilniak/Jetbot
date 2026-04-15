@@ -2,30 +2,14 @@ import os
 
 from launch import LaunchDescription
 from launch_ros.actions import Node, PushRosNamespace, SetRemap
-from launch.actions import DeclareLaunchArgument, OpaqueFunction, TimerAction, IncludeLaunchDescription, GroupAction
+from launch.actions import DeclareLaunchArgument, TimerAction, IncludeLaunchDescription, GroupAction
 from launch.substitutions import LaunchConfiguration, Command
 from ament_index_python.packages import get_package_share_directory
 from launch_ros.parameter_descriptions import ParameterValue
-from launch.conditions import IfCondition, UnlessCondition
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from nav2_common.launch import ReplaceString
 
-import xacro
-
-def modify_yaml_first_line(input_file, new_first_line):
-    with open(input_file, "r") as f:
-        lines = f.readlines()
-
-    lines[0] = new_first_line + ':\n'
-
-    with open(input_file, "w") as f:
-        f.writelines(lines)
-
-def update_yaml(context):
-    robot_name_value = LaunchConfiguration('robot_name').perform(context)  
-    controllers_file = os.path.join(get_package_share_directory('my_package'), 'config', 'controllers.yaml')
-    
-    modify_yaml_first_line(controllers_file, robot_name_value)
 
 def generate_launch_description():
     
@@ -35,6 +19,7 @@ def generate_launch_description():
     x= LaunchConfiguration('x')
     y= LaunchConfiguration('y')
     yaw= LaunchConfiguration('yaw')
+    spawn= LaunchConfiguration('spawn')
 
     pkg_path = os.path.join(get_package_share_directory('my_package'))
     xacro_file = os.path.join(pkg_path,'models', 'Jetbot_v1', 'model.urdf.xacro')
@@ -49,6 +34,7 @@ def generate_launch_description():
     )
 
     robot_state_publisher = Node(
+        condition=IfCondition(spawn),
         package='robot_state_publisher', executable='robot_state_publisher', 
         namespace=robot_name,
         parameters=[{'robot_description': robot_description, 'use_sim_time': use_sim_time}],
@@ -56,6 +42,7 @@ def generate_launch_description():
     )
     
     joint_state_publisher = Node(
+        condition=IfCondition(spawn),
         package='joint_state_publisher',
         executable='joint_state_publisher',
         parameters=[{'use_sim_time': use_sim_time}],
@@ -64,6 +51,7 @@ def generate_launch_description():
     )
 
     spawn_entity = Node(
+        condition=IfCondition(spawn),
         package='gazebo_ros', executable='spawn_entity.py',
         arguments=['-topic', ['/', robot_name, '/robot_description'],
                     '-entity', robot_name,
@@ -71,22 +59,6 @@ def generate_launch_description():
                     '-y', y,
                     '-robot_namespace', robot_name],
         output='screen'
-    )
-
-    diff_drive_spawner = Node(
-        package="controller_manager",
-        executable="spawner",
-        namespace=robot_name,
-        arguments=["diff_controller",
-                   ],
-    )
-
-    joint_broad_spawner = Node(
-        package="controller_manager",
-        executable="spawner",
-        namespace=robot_name,
-        arguments=["joint_broadcaster",
-                   ],
     )
 
     detector = Node(
@@ -159,7 +131,8 @@ def generate_launch_description():
         source_file=os.path.join(
             get_package_share_directory('my_package'), 'config', 'navigation.yaml'),
         replacements={
-            '<robot_namespace>': robot_name
+            '<robot_namespace>': robot_name,
+            '<use_sim_time>': use_sim_time
         }
     )
 
@@ -190,13 +163,11 @@ def generate_launch_description():
         DeclareLaunchArgument('x', default_value='0.0'),
         DeclareLaunchArgument('y', default_value='0.0'),
         DeclareLaunchArgument('yaw', default_value='0.0'),
+        DeclareLaunchArgument('spawn', default_value='True', description='Spawn if true'),
 
-        # OpaqueFunction(function=update_yaml),
         robot_state_publisher,
         joint_state_publisher,
         spawn_entity,
-        # diff_drive_spawner,
-        # joint_broad_spawner,
         detector,
         pather,
         amcl_node,

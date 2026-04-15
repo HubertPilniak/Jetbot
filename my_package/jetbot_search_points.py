@@ -48,11 +48,6 @@ class RoomSearchPoints(Node):
             self.odom_callback,
             1
         )
-        self.blocked_pub = self.create_publisher(
-            String,
-            '/blocked',
-            10
-        )
         self.work_report_pub = self.create_publisher(
             String,
             '/work_report',
@@ -114,7 +109,6 @@ class RoomSearchPoints(Node):
         self.already_published_work = False
 
         self.mode = "navigate"
-        self.unblocking = False
         self.timer = self.create_timer(1, self.control_loop)
 
     def publish_work(self):
@@ -124,15 +118,6 @@ class RoomSearchPoints(Node):
         msg.data = f"{self.robot_namespace}|{len(self.points)}|{visited_count}|{len(self.failed_points)}"
         self.work_report_pub.publish(msg)
         self.get_logger().info(f"Published work report: {msg.data}")
-
-    def is_unblocked(self):
-        if np.min(self.ranges) >= self.critical_distance_robots:
-            msg = String()
-            msg.data = self.robot_namespace
-            self.blocked_pub.publish(msg)
-            self.unblocking = False
-            self.unblocked_timer.cancel()
-            return
 
     def control_loop(self):
         if self.mode == "navigate":
@@ -173,19 +158,6 @@ class RoomSearchPoints(Node):
 
         self.ranges = np.array(msg.ranges)
 
-        # if np.min(self.ranges) < self.critical_distance_robots and not self.unblocking:
-        #     self.running = False
-        #     twist = Twist()
-        #     twist.linear.x = 0.0
-        #     twist.angular.z = 0.0
-        #     self.cmd_vel_pub.publish(twist)
-
-        #     self.get_logger().info(f"{self.robot_namespace }: Something too close!")
-
-        #     msg = String()
-        #     msg.data = self.robot_namespace
-        #     self.blocked_pub.publish(msg)
-
         if np.min(self.ranges) < self.critical_distance:
             self.running = False
             twist = Twist()
@@ -197,7 +169,7 @@ class RoomSearchPoints(Node):
             if self.unblocking == True:
                 msg = String()
                 msg.data = self.robot_namespace
-                self.blocked_pub.publish(msg)
+            self.publish_work()
             self.timer.cancel()
             self.navigator.cancelTask()
             self.destroy_node()
