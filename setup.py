@@ -32,6 +32,7 @@ setup(
             'jetbot_search_random = my_package.jetbot_search_random:main',
             'jetbot_search_grid = my_package.jetbot_search_grid:main',
             'jetbot_search_random_separate = my_package.jetbot_search_random_separate:main',
+            'jetbot_search_points = my_package.jetbot_search_points:main',
             'jetbot_detect = my_package.jetbot_detect:main',
             'jetbot_pather = my_package.jetbot_pather:main',
             'head = my_package.head:main',

@@ -95,7 +95,7 @@ def generate_launch_description():
             'map_update_interval': 1.0,
             'resolution': 0.05,
             'min_laser_range': 0.08,
-            'max_laser_range': 9.0,
+            'max_laser_range': 10.0,
             'ceres_thread_count': 6
         }],
         remappings=[
@@ -118,61 +118,6 @@ def generate_launch_description():
             'occupied_thresh': 0.65,
         }]
     )
-
-    namespaced_params = ReplaceString(
-        source_file=os.path.join(
-            get_package_share_directory('my_package'), 'config', 'navigation.yaml'),
-        replacements={
-            '<robot_namespace>': robot_name
-        }
-    )
-
-    navigation = GroupAction([
-        PushRosNamespace(robot_name),
-        SetRemap(src='/tf', dst='/tf'),
-        SetRemap(src='tf', dst='/tf'),
-        SetRemap(src='/tf_static', dst='/tf_static'),
-        SetRemap(src='tf_static', dst='/tf_static'),
-
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                os.path.join(
-                    get_package_share_directory('nav2_bringup'), 'launch', 'navigation_launch.py')
-            ),
-            launch_arguments={
-                'namespace': robot_name,
-                'use_sim_time': use_sim_time,
-                'params_file': namespaced_params,
-            }.items(),
-        )
-    ])
-
-    explore = Node(
-        package='explore_lite',
-        executable='explore',
-        name='explore_node',
-        namespace=robot_name,
-        output='screen',
-        parameters=[{
-            'use_sim_time': use_sim_time,
-            'robot_base_frame': [robot_name, '/base_link'],
-            'costmap_topic': 'global_costmap/costmap',
-            'costmap_updates_topic': 'global_costmap/costmap_updates',
-            'visualize': True,
-            'planner_frequency': 0.5,
-            'progress_timeout': 30.0,
-            'potential_scale': 3.0,
-            'orientation_scale': 0.0,
-            'gain_scale': 1.0,
-            'transform_tolerance': 0.3,
-            'min_frontier_size': 0.4,
-            'return_to_init': False,
-        }],
-        remappings=[
-            ('/tf', 'tf'),
-            ('/tf_static', 'tf_static'),
-        ]
-    )
     
     return LaunchDescription([
         DeclareLaunchArgument('use_sim_time', default_value='true', description='Use sim time if true'),
@@ -188,6 +133,4 @@ def generate_launch_description():
         pather,
         slam,
         map_manager,
-        navigation,
-        TimerAction(period=5.0, actions=[explore])
     ])

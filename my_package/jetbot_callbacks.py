@@ -1,5 +1,5 @@
 import numpy as np
-from example_interfaces.msg import String
+from std_msgs.msg import String
 import ast
 
 class Callbacks:
@@ -23,7 +23,7 @@ class Callbacks:
             robot_name, cell_coordinates = msg.data.split("|")
 
             if robot_name == self.node.get_namespace():
-                self.node.get_logger().info(f"Dostalem koordynaty {cell_coordinates}")
+                self.node.get_logger().info(f"Recieved coordinates {cell_coordinates}")
                 self.node.cell_coordinates = ast.literal_eval(cell_coordinates)
                 self.node.t_d = True
         #

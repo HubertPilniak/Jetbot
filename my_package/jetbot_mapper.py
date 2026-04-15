@@ -4,7 +4,7 @@ from datetime import datetime
 import math
 import rclpy
 from rclpy.node import Node
-from example_interfaces.msg import String
+from std_msgs.msg import String
 from slam_toolbox.srv import SaveMap
 from nav_msgs.msg import OccupancyGrid, MapMetaData
 
@@ -77,15 +77,8 @@ class Mapper(Node):
     def command_callback(self, msg):
         command = msg.data.strip()
 
-        if command == 'Start':
-            self.get_logger().info('Mapping started')
-
-        elif command == 'SaveMap':
+        if command == 'SaveMap':
             self.get_logger().info('SaveMap command received')
-            self.save_map()
-
-        elif command == 'Stop':
-            self.get_logger().info('Mapping stopped, saving map...')
             self.save_map()
 
     def map_callback(self, msg):
@@ -97,10 +90,10 @@ class Mapper(Node):
         self.get_logger().info("map_calback(rescale)")
         new_map = self.rescale_grid_data(msg)
 
-        map_name = f'{self.get_namespace()}_rescaled_map'
+        map_name = f'{self.get_namespace().strip("/")}_rescaled_map'
 
-        self.write_pgm(new_map, f'{self.folder_path}{map_name}.pgm')
-        self.write_yaml(new_map, f'{self.folder_path}{map_name}.yaml', map_name)
+        self.write_pgm(new_map, f'{self.folder_path}/{map_name}.pgm')
+        self.write_yaml(new_map, f'{self.folder_path}/{map_name}.yaml', map_name)
 
         self.map_saved = False
 
@@ -108,7 +101,7 @@ class Mapper(Node):
         self,
         old_map: OccupancyGrid,
         old_resolution: float = 0.05,
-        new_resolution: float = 0.2,
+        new_resolution: float = 0.25,
         occupied_threshold: int = 50):
         
         scale = new_resolution / old_resolution

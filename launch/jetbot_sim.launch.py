@@ -34,6 +34,7 @@ def generate_launch_description():
     search_type = LaunchConfiguration('search_type')
     x= LaunchConfiguration('x')
     y= LaunchConfiguration('y')
+    yaw= LaunchConfiguration('yaw')
 
     pkg_path = os.path.join(get_package_share_directory('my_package'))
     xacro_file = os.path.join(pkg_path,'models', 'Jetbot_v1', 'model.urdf.xacro')
@@ -94,11 +95,16 @@ def generate_launch_description():
         namespace=robot_name
     )
 
-    # search = Node(
-    #     package='my_package',
-    #     executable=['jetbot_search_', search_type],
-    #     namespace=robot_name
-    # )
+    search = Node(
+        package='my_package',
+        executable=['jetbot_search_', search_type],
+        namespace=robot_name,
+         parameters=[{
+                'start_x': x,
+                'start_y': y,
+                'start_yaw': yaw
+            }]
+    )
 
     pather = Node(
         package='my_package',
@@ -113,7 +119,6 @@ def generate_launch_description():
         namespace=robot_name,
         output='screen',
         parameters=[{
-            'use_sime_time': True,
             'base_frame_id': [robot_name, '/base_link'],
             'odom_frame_id': [robot_name, '/odom'],
             'global_frame_id': 'map',
@@ -122,18 +127,18 @@ def generate_launch_description():
             'use_sim_time': use_sim_time,
             'laser_min_range': 0.8,
             'laser_max_range': 10.0,
+            'min_particles': 100,
+            'max_particles': 300,
+            'max_beams': 30,
+            'transform_tolerance': 1.5,
             'tf_broadcast': True,
             'set_initial_pose': True,
             'initial_pose': {
                 'x': x,
                 'y': y,
                 'z': 0.0,
-                'yaw': 0.0
-            },
-            #'transform_tolerance': 1.0,
-            #'max_beams': 60,
-            #'update_min_d': 0.25,
-            #'update_min_a': 0.2
+                'yaw': yaw
+            }
         }]
     )
 
@@ -179,11 +184,12 @@ def generate_launch_description():
     ])
     
     return LaunchDescription([
-        DeclareLaunchArgument('use_sim_time', default_value='true', description='Use sim time if true'),
+        DeclareLaunchArgument('use_sim_time', default_value='True', description='Use sim time if true'),
         DeclareLaunchArgument('robot_name', default_value='jetbot'),
-        DeclareLaunchArgument('search_type', default_value='random'),
+        DeclareLaunchArgument('search_type', default_value='points'),
         DeclareLaunchArgument('x', default_value='0.0'),
         DeclareLaunchArgument('y', default_value='0.0'),
+        DeclareLaunchArgument('yaw', default_value='0.0'),
 
         # OpaqueFunction(function=update_yaml),
         robot_state_publisher,
@@ -192,9 +198,9 @@ def generate_launch_description():
         # diff_drive_spawner,
         # joint_broad_spawner,
         detector,
-        #search,
         pather,
         amcl_node,
-        TimerAction(period=2.0, actions=[lifecycle_manager_for_amcl]),
-        navigation
+        TimerAction(period=3.0, actions=[lifecycle_manager_for_amcl]),
+        TimerAction(period=5.0, actions=[navigation]),
+        TimerAction(period=7.0, actions=[search])
     ])

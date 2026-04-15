@@ -12,6 +12,8 @@ import re
 from collections import deque
 from ortools.constraint_solver import pywrapcp
 from ortools.constraint_solver import routing_enums_pb2
+from std_msgs.msg import String
+import json
 
 
 class PointAllocator(Node):
@@ -19,9 +21,21 @@ class PointAllocator(Node):
         super().__init__("point_allocator")
 
         self.declare_parameter("files_path", "~/maps")
+        self.declare_parameter("robots_number", 3)
 
         self.files_path = os.path.expanduser(self.get_parameter("files_path").value)
-        self.robot_namespaces = ["jetbot_0", "jetbot_1", "jetbot_2"]
+        robots_number = int(self.get_parameter("robots_number").value)
+
+        if robots_number < 1 or robots_number > 3:
+            self.get_logger().warn(
+                f"robots_number={robots_number} is invalid (should be integer number between 1 and 3), using 3"
+            )
+            robots_number = 3
+
+        all_robot_namespaces = ["jetbot_0", "jetbot_1", "jetbot_2"]
+        self.robot_namespaces = all_robot_namespaces[:robots_number]
+
+        self.get_logger().info(f"Using robot namespaces: {self.robot_namespaces}")
         
         self.robot_world_positions = {}
         self.robot_image_positions = {}
@@ -31,6 +45,12 @@ class PointAllocator(Node):
         self.timer_period = 5.0
 
         self.ready_timer = self.create_timer(self.timer_period, self.check_if_ready)
+
+        self.points_pub = self.create_publisher(
+            String,
+            '/assigned_points',
+            10
+        )
 
         self.pose_subscriptions = []
 
@@ -108,6 +128,9 @@ class PointAllocator(Node):
         return points    
 
     def robot_pose_callback(self, robot_ns: str, msg: PoseWithCovarianceStamped):
+        if robot_ns in self.robot_world_positions:
+            return
+
         wx = msg.pose.pose.position.x
         wy = msg.pose.pose.position.y
 
@@ -152,7 +175,7 @@ class PointAllocator(Node):
         
         matrix_range = 10
         self.get_logger().info(f"Showing {matrix_range} first rows and colums")
-        for i, row in enumerate(data["distance_matrix"][:matrix_range]):
+        for i, row in enumerate(data["distance_matrix"][matrix_range:]):
             self.get_logger().info(f"row {i}: {row[:matrix_range]}")
         self.get_logger().info(".....")
 
@@ -171,14 +194,14 @@ class PointAllocator(Node):
         self.ready_timer.cancel()
 
         world_paths = self.convert_routes_to_world_paths(result)
-
-
         self.get_logger().info("Converted points to world coordinates:")
 
         for route in world_paths:
             self.get_logger().info(f"Robot {route['vehicle_id']}:")
             for i, (wx, wy) in enumerate(route["world_points"]):
                 self.get_logger().info(f"  point {i}: x={wx:.3f}, y={wy:.3f}")
+        
+        self.ready_timer = self.create_timer(self.timer_period, lambda: self.publish_world_paths(world_paths))
 
     def bfs_distances_from_source(self, source, targets=None):
 
@@ -271,51 +294,27 @@ class PointAllocator(Node):
 
         return distance_matrix, robot_cells, point_cells
 
-    def build_ortools_data_model(self, return_to_start=True):
+    def build_ortools_data_model(self, return_to_start=False):
         distance_matrix, robot_cells, point_cells = self.build_cost_matrix()
 
         num_robots = len(robot_cells)
         starts = list(range(num_robots))
+        ends = list(range(num_robots))
 
-        if return_to_start:
-            ends = list(range(num_robots))
-            locations = robot_cells + point_cells
-            return {
-                "distance_matrix": distance_matrix,
-                "locations": locations,
-                "robot_cells": robot_cells,
-                "point_cells": point_cells,
-                "starts": starts,
-                "ends": ends,
-                "num_vehicles": num_robots,
-            }
+        locations = robot_cells + point_cells
 
-        real_count = len(distance_matrix)
-        total_count = real_count + num_robots
-        unreachable_cost = 10**9
+        if not return_to_start:
+            first_point_node = num_robots
+            last_point_node = num_robots + len(point_cells) - 1
 
-        extended = [[unreachable_cost for _ in range(total_count)] for _ in range(total_count)]
+            for vehicle_id in range(num_robots):
+                end_node = ends[vehicle_id]
 
-        for i in range(real_count):
-            for j in range(real_count):
-                extended[i][j] = distance_matrix[i][j]
-
-        dummy_start = real_count
-
-        for i in range(real_count):
-            for r in range(num_robots):
-                end_idx = dummy_start + r
-                extended[i][end_idx] = 0
-
-        for r in range(num_robots):
-            end_idx = dummy_start + r
-            extended[end_idx][end_idx] = 0
-
-        ends = [dummy_start + r for r in range(num_robots)]
-        locations = robot_cells + point_cells + [None] * num_robots
+                for point_node in range(first_point_node, last_point_node + 1):
+                    distance_matrix[point_node][end_node] = 0
 
         return {
-            "distance_matrix": extended,
+            "distance_matrix": distance_matrix,
             "locations": locations,
             "robot_cells": robot_cells,
             "point_cells": point_cells,
@@ -512,6 +511,34 @@ class PointAllocator(Node):
         wy = origin_y + (map_y + 0.5) * resolution
 
         return (wx, wy)
+
+    def publish_world_paths(self, world_paths):
+        msg = String()
+
+        payload = {
+            "routes": []
+        }
+
+        for route in world_paths:
+            vehicle_id = route["vehicle_id"]
+
+            robot_namespace = ""
+            if vehicle_id < len(self.robot_namespaces):
+                robot_namespace = self.robot_namespaces[vehicle_id]
+
+            payload["routes"].append({
+                "vehicle_id": vehicle_id,
+                "robot_namespace": robot_namespace,
+                "world_points": [
+                    {"x": float(x), "y": float(y)}
+                    for x, y in route["world_points"]
+                ]
+            })
+
+        msg.data = json.dumps(payload)
+        self.points_pub.publish(msg)
+
+        self.get_logger().info(f"Published routes for {len(payload['routes'])} robots on /assigned_points")
 
 def main(args=None):
     rclpy.init(args=args)

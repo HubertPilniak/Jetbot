@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from example_interfaces.msg import String
+from std_msgs.msg import String
 from sensor_msgs.msg import Image
 import cv2
 import numpy as np
@@ -40,7 +40,7 @@ class ColorDetect(Node):
         upper_red = np.array([5, 255, 255])
         mask = cv2.inRange(hsv, lower_red, upper_red)
 
-        if np.count_nonzero(mask) > 30720:  # 30720 is 10% of 307200 which is number of pixels in 640x480 camera image; around 1 meter from red box
+        if np.count_nonzero(mask) > 100:  
             self.send_message()
         
     def send_message(self):

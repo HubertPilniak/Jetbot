@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from example_interfaces.msg import String
+from std_msgs.msg import String
 from sensor_msgs.msg import Image, LaserScan
 from cv_bridge import CvBridge
 from nav_msgs.msg import Odometry, OccupancyGrid, MapMetaData
@@ -18,8 +18,6 @@ class Head(Node):
     def __init__(self):
         super().__init__('head')
 
-        self.tf_static_broadcaster = StaticTransformBroadcaster(self)
-
         self.detect_sub = self.create_subscription(
             String,
             '/detect',
@@ -31,46 +29,18 @@ class Head(Node):
             '/robot_command',
             10
         )
-
-        map_qos = QoSProfile(
-            depth=1,
-            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
-        )
-        
-        self.grid_pub = self.create_publisher(
-            OccupancyGrid,
-            '/grid',
-            map_qos
-        )
-
-        self.robot_position_sub = self.create_subscription(
+        self.blocked_sub = self.create_subscription(
             String,
-            '/robot_position',
-            self.grid_update_robot_position,
+            '/blocked',
+            self.blocked_callback,
             10
         )
-
-        self.map_sub = self.create_subscription(
+        self.work_report_sub = self.create_subscription(
             String,
-            '/map',
-            self.map_callback,
+            '/work_report',
+            self.work_report_callback,
             10
         )
-
-        self.coverage_grid_pub = self.create_publisher(
-            OccupancyGrid,
-            '/coverage_grid',
-            map_qos
-        )
-
-
-        self.declare_parameter('map_width', 10.0)
-        self.declare_parameter('map_height', 10.0)
-
-        self.map_width = self.get_parameter('map_width').get_parameter_value().double_value
-        self.map_height = self.get_parameter('map_height').get_parameter_value().double_value
-
-        self.grid_create(self.map_width, self.map_height)
         
         self.bridge = CvBridge()
 
@@ -82,17 +52,44 @@ class Head(Node):
         self.robots_positions = {}
 
         self.robot_name = ""
+
+        self.blocked_robot = None
      
+    def work_report_callback(self, msg):
+        robot_namespace, points_count, visited_count, failed_count = msg.data.split("|")
+        self.get_logger().info("--------------")
+        self.get_logger().info(f"Robot: {robot_namespace}:")
+        self.get_logger().info(f"points: {points_count}, visited: {visited_count}, failed: {failed_count}")
+        self.check_time()
+        self.get_logger().info("--------------")
+
+    def blocked_callback(self, msg):
+            
+        if self.blocked_robot == None:
+
+            self.blocked_robot = msg.data
+            msg = String()
+            msg.data = "Stop"
+            self.robot_command_pub.publish(msg)
+            self.get_logger().info(f"Sent Stop, robot {self.blocked_robot} blocked!")
+            
+            msg = String()
+            msg.data = self.blocked_robot
+            self.robot_command_pub.publish(msg)
+            return
+
+        if self.blocked_robot == msg.data:
+            msg = String()
+            msg.data = "Start"
+            self.robot_command_pub.publish(msg)
+            self.get_logger().info(f"Sent Start, robot {self.blocked_robot} unblocked!")
+            self.blocked_robot = None
 
     def command_stop(self):
         msg = String()
         msg.data = "Stop"
         self.robot_command_pub.publish(msg)
         self.get_logger().info("Sent Stop!")
-        self.check_time()
-
-        if hasattr(self, "grid"):
-            self.grid_save()
 
     def command_start(self):
         msg = String()
@@ -102,31 +99,20 @@ class Head(Node):
         self.get_logger().info("Sent Start!")
 
         self.image_saved = False
-    
-    def command_take_direction(self, index):
+
+    def command_save_map(self):
         msg = String()
-        msg.data = f'{next(iter(self.robots_positions))}|{self.index_to_world(index)}'
+        msg.data = "SaveMap"
         self.robot_command_pub.publish(msg)
-        self.get_logger().info(f"Sent direction to {next(iter(self.robots_positions))}")
-
-    def index_to_world(self, index):
-        if 0 <= index < self.grid.info.width * self.grid.info.height:
-
-            x = (index % self.grid.info.width * self.grid.info.resolution) + self.grid.info.origin.position.x + (self.grid.info.resolution / 2.0)
-            y = (index // self.grid.info.height * self.grid.info.resolution) + self.grid.info.origin.position.y + (self.grid.info.resolution / 2.0)
-            return x, y
-        else:
-            return self.get_logger().error("index_to_world: Index of cell outside of bonds of the array")   
+        self.get_logger().info("Sent SaveMap!")
 
     def detector_callback(self, msg):
         self.robot_name, status = msg.data.split("|")
 
         if status == "Color detected!":
+            self.get_logger().info(f'Object finded!')
             self.command_stop()
             self.get_logger().info(self.robot_name + " " + status)
-
-            self.get_logger().info(f'Object finded!')
-            self.check_time()
 
             self.image_sub = self.create_subscription(
                 Image,
@@ -134,6 +120,9 @@ class Head(Node):
                 self.save_image_once,
                 1
             )
+            msg = String()
+            msg.data = "Publish work"
+            self.robot_command_pub.publish(msg)
     
     def keyboard_input(self):
         while True:
@@ -148,11 +137,8 @@ class Head(Node):
             elif command.lower() == "stop":
                 self.command_stop()
 
-            elif command.lower() == "hop":
-                if args:
-                    self.command_take_direction(int(args))
-                else:
-                    print("Error: 'hop' requires a value.")
+            elif command.lower() == "savemap":
+                self.command_save_map()
     
     def save_image_once(self, msg):
         if self.image_saved:
@@ -168,101 +154,12 @@ class Head(Node):
 
     def check_time(self):
         duration = self.get_clock().now() - self.start_time
-        seconds = duration.nanoseconds / 1e9
+        total_seconds = duration.nanoseconds / 1e9
 
-        self.get_logger().info(f'Searching time: {seconds:.3f} s.')
+        minutes = int(total_seconds // 60)
+        seconds = total_seconds % 60
 
-    def grid_update_robot_position(self, msg):
-
-        self.robot_name, robot_position_x, robot_position_y = msg.data.split("|")
-
-        x, y = (float(robot_position_x), float(robot_position_y))
-
-        resolution = self.grid.info.resolution
-        origin_x = self.grid.info.origin.position.x
-        origin_y = self.grid.info.origin.position.y
-
-        grid_x = int((x - origin_x) / resolution)
-        grid_y = int((y - origin_y) / resolution)
-
-        self.robots_positions[self.robot_name] = (grid_x, grid_y)
-
-        if 0 <= grid_x < self.grid.info.width and 0 <= grid_y < self.grid.info.height:
-            index = grid_y * self.grid.info.width + grid_x
-            
-            self.grid.data[index] = 1
-            
-            self.grid.header.stamp = self.get_clock().now().to_msg()
-            self.grid_pub.publish(self.grid)        
-
-    def grid_create(self, width, height):
-        if width > 0.0 and height > 0.0:
-            resolution = 0.2
-
-            self.grid = OccupancyGrid()
-            self.grid.info = MapMetaData()
-            self.grid.info.width = int(width / resolution)
-            self.grid.info.height = int(height / resolution)
-            self.grid.info.resolution = resolution
-            self.grid.header.frame_id = "grid"
-
-            self.grid.info.origin = Pose()
-            self.grid.info.origin.position.x = - width / 2.0
-            self.grid.info.origin.position.y = - height / 2.0
-
-            self.grid.data = [-1] * (self.grid.info.width * self.grid.info.height)
-
-            self.get_logger().info("Grid created.")
-
-    def grid_save(self):
-        width = self.grid.info.width
-        height = self.grid.info.height
-        data = np.array(self.grid.data, dtype=np.int8).reshape((height, width))  # reshape first value number of rows, second number of columns
-
-        display_grid = np.ones((height, width), dtype=np.float32)  # visited (white)
-        display_grid[data == -1] = 0.5    # unknown (gray)
-        for position in self.robots_positions.values():
-            x, y = position
-            display_grid[y, x] = 0.0   # robot (black)
-
-        total_cells = width * height
-        explored_cells = np.count_nonzero(data == 1)
-        unknown_cells = np.count_nonzero(data == -1)
-
-        self.get_logger().info(f"Total cells: {total_cells}")
-        self.get_logger().info(f"Explored cells: {explored_cells}")
-        self.get_logger().info(f"Unknown cells: {unknown_cells}")
-
-        plt.figure(figsize=(10, 10)) 
-        plt.imshow(display_grid, cmap='gray', origin='lower', vmin=0.0, vmax=1.0)
-        plt.title("Coverage Grid")
-        plt.xlabel("X (cells)")
-        plt.ylabel("Y (cells)")
-        plt.grid(False)
-        p = plt.gca()
-        p.set_xticks(np.arange(0, width, 5))
-        p.set_yticks(np.arange(0, height, 5))
-
-        p.set_xticks(np.arange(-.5, width, 1), minor=True)
-        p.set_yticks(np.arange(-.5, height, 1), minor=True)
-
-        p.grid(which='minor', color='black', linestyle='-', linewidth=1)
-
-        p.tick_params(which='minor', bottom=False, left=False)
-
-        filename="coverage_grid.png"
-        plt.savefig(filename)
-        plt.close()
-        print(f"Coverage grid saved as: {filename}")
-
-    def map_callback(self, msg):
-        self.coverage_grid = list(msg.data)
-        self.map_info = msg.info
-
-        self.destroy_subscription(self.map_sub)
-        self.map_sub = None
-
-
+        self.get_logger().info(f"Searching time: {minutes:02d}:{seconds:06.3f}")
 
 
 def main(args=None):

@@ -12,7 +12,7 @@ class PointGenerator:
         observation_range_cells: int,
         free_threshold: int = 250,
     ):
-        self.pgm_path = str(pgm_path)
+        self.pgm_path = str(pgm_path + "/jetbot_rescaled_map.pgm")
         self.observation_range_cells = int(observation_range_cells)
         self.free_threshold = int(free_threshold)
 
@@ -127,18 +127,18 @@ class PointGenerator:
 
         candidates = []
 
-        # 1) horizontal
-        horizontal_cells = [(xx, y) for xx in range(x + 1, x + 1 + d)]
-        cand_horizontal = self.last_free_on_path(horizontal_cells)
-        if cand_horizontal is not None:
-            candidates.append(cand_horizontal)
-
-        # 2) diagonal
+        # 1) diagonal
         diag_step = int(d / math.sqrt(2))
         diagonal_cells = [(x + k, y + k) for k in range(1, 1 + diag_step)]
         cand_diagonal = self.last_free_on_diagonal_path(diagonal_cells)
         if cand_diagonal is not None:
             candidates.append(cand_diagonal)
+
+        # 2) horizontal
+        horizontal_cells = [(xx, y) for xx in range(x + 1, x + 1 + d)]
+        cand_horizontal = self.last_free_on_path(horizontal_cells)
+        if cand_horizontal is not None:
+            candidates.append(cand_horizontal)
 
         # 3) vertical
         vertical_cells = [(x, yy) for yy in range(y + 1, y + 1 + d)]
@@ -261,8 +261,8 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("pgm_path", help="Path to PGM file")
-    parser.add_argument("--range-cells", type=int, default=10, help="Range of observation in cells")
-    parser.add_argument("--free-threshold", type=int, default=250)
+    parser.add_argument("--range-cells", type=int, default=8, help="Range of observation in cells")
+    parser.add_argument("--free-threshold", type=int, default=220)
     args = parser.parse_args()
 
     pgm_path = Path(args.pgm_path).resolve()

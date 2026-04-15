@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.node import Node
-from example_interfaces.msg import String
+from std_msgs.msg import String
 from nav_msgs.msg import Odometry
 import csv
 import os

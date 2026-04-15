@@ -72,12 +72,12 @@
     <physics type='ode'>
       <max_step_size>0.001</max_step_size>
       <real_time_factor>1</real_time_factor>
-      <real_time_update_rate>1000</real_time_update_rate>
+      <real_time_update_rate>250</real_time_update_rate>
     </physics>
     <scene>
       <ambient>0.4 0.4 0.4 1</ambient>
       <background>0.7 0.7 0.7 1</background>
-      <shadows>false</shadows>
+      <shadows>0</shadows>
     </scene>
     <audio>
       <device>default</device>
@@ -91,18 +91,18 @@
       <heading_deg>0</heading_deg>
     </spherical_coordinates>
     <state world_name='default'>
-      <sim_time>2434 282000000</sim_time>
-      <real_time>25 686539095</real_time>
-      <wall_time>1770604580 804017787</wall_time>
-      <iterations>25471</iterations>
-      <model name='RedBox2'>
-        <pose>-4.14563 -4.40673 0.050001 6e-06 -1.3e-05 -2.9e-05</pose>
+      <sim_time>2460 265000000</sim_time>
+      <real_time>26 66334649</real_time>
+      <wall_time>1776181676 764749140</wall_time>
+      <iterations>25983</iterations>
+      <model name='RedBox3'>
+        <pose>-4.16122 -4.29932 0.05 0 -0 0</pose>
         <scale>1 1 1</scale>
         <link name='link_0'>
-          <pose>-4.14563 -4.40673 0.050001 6e-06 -1.3e-05 -2.9e-05</pose>
+          <pose>-4.16122 -4.29932 0.05 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0.177574 0.178304 2.24077 -0.41702 -0.417433 3.14137</acceleration>
-          <wrench>0.177574 0.178304 2.24077 0 -0 0</wrench>
+          <acceleration>-2e-06 -0 -5e-06 7e-06 -3.9e-05 -1e-06</acceleration>
+          <wrench>-2e-06 -0 -5e-06 0 -0 0</wrench>
         </link>
       </model>
       <model name='Square_10mx10m_0'>
@@ -149,7 +149,7 @@
     </state>
     <gui fullscreen='0'>
       <camera name='user_camera'>
-        <pose>10.3733 -0.561079 22.0484 0 1.12435 -3.06726</pose>
+        <pose>8.78679 1.86352 22.7195 0 1.12435 -3.06726</pose>
         <view_controller>orbit</view_controller>
         <projection_type>perspective</projection_type>
       </camera>
@@ -559,7 +559,7 @@
       <allow_auto_disable>1</allow_auto_disable>
       <pose>-0.007283 -10.7639 0 0 -0 0</pose>
     </model>
-    <model name='RedBox2'>
+    <model name='RedBox3'>
       <link name='link_0'>
         <inertial>
           <mass>1</mass>
@@ -582,7 +582,7 @@
           <pose>0 0 0 0 -0 0</pose>
           <geometry>
             <box>
-              <size>0.1 0.1 0.1</size>
+              <size>0.25 0.25 0.1</size>
             </box>
           </geometry>
           <material>
@@ -608,7 +608,7 @@
           <pose>0 0 0 0 -0 0</pose>
           <geometry>
             <box>
-              <size>0.1 0.1 0.1</size>
+              <size>0.25 0.25 0.1</size>
             </box>
           </geometry>
           <surface>
@@ -660,7 +660,7 @@
       </link>
       <static>0</static>
       <allow_auto_disable>1</allow_auto_disable>
-      <pose>-4.14563 -4.40673 0 0 -0 0</pose>
+      <pose>-4.16122 -4.29932 0 0 -0 0</pose>
     </model>
   </world>
 </sdf>
