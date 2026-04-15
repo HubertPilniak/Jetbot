@@ -1,0 +1,7 @@
+image: /jetbot_rescaled_map.pgm
+mode: trinary
+resolution: 0.2
+origin: [-26.439982707347216, -6.46607159908772, 0.0]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.25
