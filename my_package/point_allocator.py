@@ -175,7 +175,7 @@ class PointAllocator(Node):
         
         matrix_range = 10
         self.get_logger().info(f"Showing {matrix_range} first rows and colums")
-        for i, row in enumerate(data["distance_matrix"][matrix_range:]):
+        for i, row in enumerate(data["distance_matrix"][:matrix_range]):
             self.get_logger().info(f"row {i}: {row[:matrix_range]}")
         self.get_logger().info(".....")
 
@@ -470,15 +470,39 @@ class PointAllocator(Node):
             (0, 0, 255),    
             (255, 255, 0)   
         ]
+
+        dark_colors_rgb = [
+            (0, 120, 0), 
+            (0, 0, 120),    
+            (120, 120, 0)   
+        ]
+
+        visibility_map = self.load_visibility_map()
+
         for route in result["routes"]:
             robot_id = route['vehicle_id']
             self.get_logger().info(f'Robot {robot_id}: {robot_colors[robot_id]}')
             for point in route['nodes']:
                 x, y = real_nodes[point]
 
+                for cell_x, cell_y in visibility_map.get((x, y), []):
+                    img[cell_y, cell_x] = dark_colors_rgb[robot_id]
+
                 img[y, x] = robot_colors_rgb[robot_id]
 
         Image.fromarray(img).save(os.path.join(self.files_path, "jetbot_observation_points_colored.png"))
+
+    def load_visibility_map(self):
+        visibility_path = os.path.join(self.files_path, "visibility.txt")
+        visibility_map = {}
+
+        with open(visibility_path, "r", encoding="utf-8") as f:
+            for point, line in zip(self.point_cells, f):
+                visible = line.split("visible=")[1].strip()
+                cells = re.findall(r'\((\d+),\s*(\d+)\)', visible)
+                visibility_map[point] = [(int(x), int(y)) for x, y in cells]
+
+        return visibility_map
 
     def convert_routes_to_world_paths(self, result):
         world_paths = []

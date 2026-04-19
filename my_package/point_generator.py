@@ -116,9 +116,39 @@ class PointGenerator:
     
     def last_free_on_diagonal_path(self, cells):
         last_free = None
+        left_obstacle = False
+        top_obstacle = False
         for x, y in cells:
-            if not self.is_free_in_working_grid(x, y) or (not self.is_free_in_obstacle_mask(x-1, y) and not self.is_free_in_obstacle_mask(x, y-1)):    
+            if not self.is_free_in_working_grid(x, y):    
                 break
+            if not self.is_free_in_obstacle_mask(x-1, y):
+                if top_obstacle:
+                    break
+                left_obstacle = True
+            if not self.is_free_in_obstacle_mask(x, y-1):
+                if left_obstacle:
+                    break
+                top_obstacle = True
+
+            last_free = (x, y)
+        return last_free
+
+    def last_visible_on_diagonal_path(self, cells, sign_x, sign_y):
+        last_free = None
+        left_obstacle = False
+        top_obstacle = False
+        for x, y in cells:
+            if not self.is_free_in_obstacle_mask(x, y):    
+                break
+            if not self.is_free_in_obstacle_mask(x-sign_x, y):
+                if top_obstacle:
+                    break
+                left_obstacle = True
+            if not self.is_free_in_obstacle_mask(x, y-sign_y):
+                if left_obstacle:
+                    break
+                top_obstacle = True
+
             last_free = (x, y)
         return last_free
 
@@ -187,6 +217,8 @@ class PointGenerator:
 
             step += 1
 
+        self.validate_visibility_count()
+
         return self.observation_points
 
     def sign_of(self, x):
@@ -194,6 +226,22 @@ class PointGenerator:
             return 1
         if x < 0:
             return -1
+
+    def get_vision_on_diagonals(self, cx, cy):
+        diag_step = int(self.observation_range_cells / math.sqrt(2))
+        diagonal_ends = [(-1, -1), (1, -1), (-1, 1), (1, 1)]
+        markable_cells_diagonal = []
+        for sign_x, sign_y in diagonal_ends:
+            diagonal_cells = [(cx + (sign_x * k), cy + (sign_y * k)) for k in range(1, 1 + diag_step)]
+            last_markable_diagonal = self.last_visible_on_diagonal_path(diagonal_cells, sign_x, sign_y)
+            if last_markable_diagonal is not None:
+                diagonal_part = diagonal_cells[:diagonal_cells.index(last_markable_diagonal) + 1]
+
+                for x, y in diagonal_part:
+                    if self.is_free_in_working_grid(x, y):
+                        markable_cells_diagonal.append((x, y))
+
+        return markable_cells_diagonal
 
     def get_markable_cells_from_point(self, cx, cy, visible_offsets, dda_rays):
         markable = []
@@ -205,10 +253,8 @@ class PointGenerator:
             if not self.is_free_in_working_grid(tx, ty):
                 continue
 
-            # for diagonal cell x equals y, check if it is not blocked from both sides
-            if dx == dy and dx !=0:
-                if not self.is_free_in_obstacle_mask(tx-self.sign_of(dx), ty) and not self.is_free_in_obstacle_mask(tx, ty-self.sign_of(dy)):
-                    continue
+            if abs(dx) == abs(dy) and dx != 0:
+                continue
 
             ray_cells = dda_rays[(dx, dy)]
             blocked = False
@@ -225,6 +271,8 @@ class PointGenerator:
                 continue
 
             markable.append((tx, ty))
+            
+        markable.extend(self.get_vision_on_diagonals(cx, cy))
 
         return markable
 
@@ -256,6 +304,40 @@ class PointGenerator:
                     f"visible_count={item['visible_count']}\n"
                 )
 
+    def save_visibility_txt(self, output_path: str):
+        with open(output_path, "w", encoding="utf-8") as f:
+            for item in self.observation_points:
+                f.write(
+                    f"step={item['step']}, "
+                    f"point={item['observation_point']}, "
+                    f"visible={item['visible_cells']}\n"
+                )
+
+    def validate_visibility_count(self):
+        total_visible_count = sum(item["visible_count"] for item in self.observation_points)
+        total_free_cells = int(np.count_nonzero(~self.static_obstacle_mask))
+
+        if total_visible_count < total_free_cells:
+            missing = total_free_cells - total_visible_count
+            print(
+                f"[WARNING] Not all free cells were seen. "
+                f"visible_count={total_visible_count}, free_cells={total_free_cells}, missing={missing}"
+            )
+            return False
+
+        if total_visible_count > total_free_cells:
+            extra = total_visible_count - total_free_cells
+            print(
+                f"[WARNING] Duplicates detected. "
+                f"visible_count={total_visible_count}, free_cells={total_free_cells}, extra={extra}"
+            )
+            return False
+
+        print(
+            f"[OK] Visibility count is correct. "
+            f"visible_count={total_visible_count}, free_cells={total_free_cells}"
+        )
+        return True
 
 def main():
 
@@ -266,10 +348,11 @@ def main():
     args = parser.parse_args()
 
     pgm_path = Path(args.pgm_path).resolve()
-    output_dir = pgm_path.parent
+    output_dir = pgm_path
 
     debug_image_path = output_dir / "observation_points_debug.png"
     points_txt_path = output_dir / "observation_points.txt"
+    visibility_txt_path = output_dir / "visibility.txt"
 
     planner = PointGenerator(
         pgm_path=str(pgm_path),
@@ -280,6 +363,7 @@ def main():
     points = planner.plan()
     planner.save_debug_image(str(debug_image_path))
     planner.save_points_txt(str(points_txt_path))
+    planner.save_visibility_txt(str(visibility_txt_path))
 
     print(f"Observation points: {len(points)}")
     print(f"Saved image: {debug_image_path}")
