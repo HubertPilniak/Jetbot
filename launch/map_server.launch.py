@@ -16,7 +16,7 @@ def generate_launch_description():
         output='screen',
         parameters=[{
             'use_sim_time': use_sim_time,
-            'yaml_filename': [EnvironmentVariable('HOME'), "/", map_dir, "/", map_name, ".yaml"],
+            'yaml_filename': [map_dir, "/", map_name, ".yaml"],
         }]
     )
 
