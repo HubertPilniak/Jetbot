@@ -166,9 +166,6 @@ class RoomSearchPoints(Node):
             self.cmd_vel_pub.publish(twist)
 
             self.get_logger().info(f"{self.robot_namespace }: Something critically close!")
-            if self.unblocking == True:
-                msg = String()
-                msg.data = self.robot_namespace
             self.publish_work()
             self.timer.cancel()
             self.navigator.cancelTask()

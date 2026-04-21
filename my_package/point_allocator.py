@@ -455,10 +455,20 @@ class PointAllocator(Node):
 
         img[(img == [255, 255, 255]).all(axis=2)] = [180, 180, 180]
 
+        img_areas = img.copy()
+
+        img_areas_and_points = img.copy()
+
+        img_areas_and_points_without_robots = img.copy()
+
+        img_red = img.copy()
+
         robot_cells = [self.robot_image_positions[ns] for ns in self.robot_namespaces]
         point_cells = self.point_cells
 
         real_nodes = robot_cells + point_cells
+
+        robot_num = len(robot_cells)
 
         robot_colors = [
             "green", 
@@ -486,11 +496,27 @@ class PointAllocator(Node):
                 x, y = real_nodes[point]
 
                 for cell_x, cell_y in visibility_map.get((x, y), []):
-                    img[cell_y, cell_x] = dark_colors_rgb[robot_id]
+                    img_areas[cell_y, cell_x] = dark_colors_rgb[robot_id]
+                    img_areas_and_points[cell_y, cell_x] = dark_colors_rgb[robot_id]
+                    img_areas_and_points_without_robots[cell_y, cell_x] = dark_colors_rgb[robot_id]
 
                 img[y, x] = robot_colors_rgb[robot_id]
+                img_areas_and_points[y, x] = robot_colors_rgb[robot_id]
+                img_red[y, x] = robot_colors_rgb[robot_id]
+                if point >= robot_num: 
+                    img_areas_and_points_without_robots[y, x] = robot_colors_rgb[robot_id]
+                    img_red[y, x] = (255, 0, 0)
+
+        for robot_id, (x, y) in enumerate(robot_cells):
+            img[y, x] = robot_colors_rgb[robot_id]
+            img_areas_and_points[y, x] = robot_colors_rgb[robot_id]
+            img_red[y, x] = robot_colors_rgb[robot_id]       
 
         Image.fromarray(img).save(os.path.join(self.files_path, "jetbot_observation_points_colored.png"))
+        Image.fromarray(img_red).save(os.path.join(self.files_path, "jetbot_observation_points_colored_only_robots.png"))
+        Image.fromarray(img_areas).save(os.path.join(self.files_path, "jetbot_observation_areas_colored.png"))
+        Image.fromarray(img_areas_and_points).save(os.path.join(self.files_path, "jetbot_observation_areas_and_points_colored.png"))
+        Image.fromarray(img_areas_and_points_without_robots).save(os.path.join(self.files_path, "jetbot_observation_areas_and_points_without_robots_colored.png"))
 
     def load_visibility_map(self):
         visibility_path = os.path.join(self.files_path, "visibility.txt")
